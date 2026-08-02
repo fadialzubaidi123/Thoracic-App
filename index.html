@@ -1,0 +1,1746 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="navy">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ward List">
+<meta name="theme-color" content="#131E33">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Thoracic Ward List</title>
+<style>
+  html[data-theme="navy"] {
+    --ink: #131E33; --ink-soft: #9AA8C4;
+    --accent: #2E5C9E; --accent-dark: #234878; --accent-tint: #E7EDF6;
+    --paper: #F1F3F6;
+  }
+  html[data-theme="maroon"] {
+    --ink: #3E1219; --ink-soft: #C4A0A6;
+    --accent: #8A2333; --accent-dark: #6E1B28; --accent-tint: #F5E8EA;
+    --paper: #F5F1F0;
+  }
+  html[data-theme="emerald"] {
+    --ink: #0E251C; --ink-soft: #93B3A5;
+    --accent: #167A50; --accent-dark: #10603E; --accent-tint: #E6F2EC;
+    --paper: #F0F4F1;
+  }
+  :root {
+    --card: #FFFFFF;
+    --alert: #C4452B;
+    --alert-tint: #F9ECE8;
+    --amber: #B07D2B;
+    --muted: #66757F;
+    --line: #E1E6E4;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { font-size: 16px; height: 100%; background: var(--ink); }
+  body {
+    font-family: var(--sans);
+    background: var(--paper);
+    color: var(--ink);
+    height: 100vh;
+    height: 100dvh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  header {
+    background: var(--ink); color: #fff;
+    padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    flex: none;
+  }
+  .h-left { min-width: 0; }
+  .h-left .w-name { font-size: 1.02rem; font-weight: 700; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .h-left .count { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-soft); }
+  .palette-btn { background: none; border: none; color: #fff; padding: 4px; flex-shrink: 0; display: flex; }
+  .swatches { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+  .swatch { aspect-ratio: 1; border-radius: 50%; border: 3px solid transparent; padding: 0; }
+  .swatch.sel { border-color: var(--ink); box-shadow: inset 0 0 0 3px #fff; }
+  .custom-row {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px;
+    font-size: 0.92rem; font-weight: 600;
+  }
+  .custom-row input[type=color] {
+    width: 52px; height: 44px; border: none; border-radius: 10px; padding: 0; background: none;
+  }
+
+  .carousel {
+    flex: 1 1 auto; min-height: 0;
+    display: flex;
+    overflow-x: auto; overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .carousel::-webkit-scrollbar { display: none; }
+  .page {
+    flex: 0 0 100%; min-width: 0;
+    scroll-snap-align: start; scroll-snap-stop: always;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: 10px 10px 110px;
+    display: block;
+  }
+  .page > .card { margin-bottom: 8px; }
+  .empty { text-align: center; color: var(--muted); padding: 70px 30px; line-height: 1.5; }
+  .empty strong { color: var(--ink); display: block; margin-bottom: 6px; font-size: 1.05rem; }
+
+  .card { background: var(--card); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+  .head { display: flex; align-items: center; gap: 8px; padding: 0 10px 0 0; cursor: pointer; min-height: 54px; }
+  .bed {
+    background: var(--ink); color: #fff; min-width: 52px; align-self: stretch;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px;
+  }
+  .bed .label { font-size: 0.5rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-soft); }
+  .bed .num { font-family: var(--mono); font-size: 1.15rem; font-weight: 700; }
+  .head-mid { flex: 1; min-width: 0; padding: 7px 0; }
+  .head-mid .pt-line { font-size: 0.88rem; font-weight: 700; letter-spacing: 0.02em; }
+  .head-mid .pt-line .age { font-family: var(--mono); font-weight: 600; color: var(--muted); font-size: 0.8rem; }
+  .head-mid .op { font-size: 0.8rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cons-badge { font-family: var(--mono); font-weight: 700; font-size: 0.75rem; background: var(--accent-tint); color: var(--accent-dark); padding: 3px 6px; border-radius: 6px; white-space: nowrap; }
+  .pod { font-family: var(--mono); font-weight: 700; font-size: 0.78rem; background: var(--accent); color: #fff; padding: 3px 7px; border-radius: 6px; white-space: nowrap; }
+  .chev-card { color: var(--muted); font-size: 0.7rem; transition: transform 0.15s; }
+  .card.open .chev-card { transform: rotate(180deg); }
+  .body { display: none; border-top: 1px solid var(--line); }
+  .card.open .body { display: block; }
+
+  .section { padding: 9px 12px; border-bottom: 1px solid var(--line); }
+  .section:last-child { border-bottom: none; }
+  .sec-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 700; margin-bottom: 6px; }
+  .id-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .id-btns { margin-left: auto; display: flex; gap: 8px; }
+  .chip { font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: var(--accent-tint); color: var(--accent-dark); white-space: nowrap; }
+  .chip.warn { background: #F8ECE3; color: var(--amber); }
+  .chip.danger { background: var(--alert); color: #fff; font-weight: 700; }
+  .edit-btn { background: var(--accent-tint); border: none; color: var(--accent-dark); font-size: 0.82rem; font-weight: 700; padding: 6px 14px; border-radius: 8px; }
+  .edit-btn.solid { background: var(--accent); color: #fff; }
+
+  .more-row {
+    padding: 9px 12px; background: var(--accent-tint); color: var(--accent-dark);
+    font-size: 0.76rem; font-weight: 700; letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--line); cursor: pointer; text-align: center;
+  }
+
+  .tiles { display: grid; gap: 6px; grid-template-columns: repeat(6, 1fr); }
+  .tile { text-align: center; background: #F6F8F7; border-radius: 8px; padding: 5px 2px; min-width: 0; }
+  .tile .t-label { font-size: 0.56rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 700; }
+  .tile .t-val { font-family: var(--mono); font-size: 0.82rem; font-weight: 600; margin-top: 1px; white-space: nowrap; }
+  .tile .t-val.blank { color: #C2CBC8; }
+
+  .drain { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; padding: 3px 0; }
+  .drain + .drain { border-top: 1px dashed var(--line); margin-top: 4px; padding-top: 7px; }
+  .drain .d-name { font-weight: 700; font-size: 0.82rem; }
+  .drain .d-item { font-size: 0.82rem; }
+  .drain .d-item span { color: var(--muted); }
+  .drain .d-item b { font-family: var(--mono); font-weight: 600; }
+  .drain .d-item b.leak { color: var(--alert); }
+  .flag-clamped { font-size: 0.7rem; font-weight: 700; color: #fff; background: var(--alert); padding: 2px 8px; border-radius: 6px; letter-spacing: 0.04em; }
+  .no-drains, .none-txt { font-size: 0.82rem; color: var(--muted); }
+
+  .med-row { font-size: 0.86rem; padding: 2px 0; }
+  .med-row span.m-label { color: var(--muted); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-right: 6px; }
+  .med-row.allergy-line span.m-label, .med-row.allergy-line b { color: var(--alert); }
+  .med-item { font-size: 0.86rem; padding: 1px 0 1px 4px; }
+  .med-item::before { content: "\2022  "; color: var(--muted); }
+
+  .meta-row { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 7px; }
+  .meta-item { font-size: 0.78rem; color: var(--muted); }
+  .meta-item b { font-family: var(--mono); color: var(--ink); font-weight: 600; }
+  .stale { color: var(--amber); font-weight: 700; }
+  .cxr-note { font-size: 0.82rem; color: var(--ink); margin-top: 4px; padding-left: 2px; font-style: italic; }
+
+  .notes-area textarea {
+    width: 100%; min-height: 74px; resize: vertical;
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px; font-size: 0.9rem; font-family: var(--sans);
+    background: #FAFBFA; color: var(--ink); line-height: 1.4;
+  }
+
+  .jobs .job { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+  .jobs .job input[type=checkbox] { width: 21px; height: 21px; accent-color: var(--accent); flex-shrink: 0; }
+  .jobs .job .j-text { font-size: 0.9rem; flex: 1; }
+  .jobs .job.done .j-text { color: var(--muted); text-decoration: line-through; }
+  .jobs .j-del { background: none; border: none; color: #C2CBC8; font-size: 1rem; padding: 2px 6px; }
+  .job-add { display: flex; gap: 8px; margin-top: 6px; }
+  .job-add input { flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 0.9rem; font-family: var(--sans); background: #FAFBFA; }
+  .job-add button { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 0 14px; font-size: 0.85rem; font-weight: 700; }
+
+  .fab {
+    position: fixed; right: 16px; bottom: calc(78px + env(safe-area-inset-bottom));
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--accent); color: #fff; border: none;
+    font-size: 1.85rem; line-height: 1; box-shadow: 0 4px 14px rgba(0,0,0,0.3); z-index: 60;
+  }
+
+  .bottombar {
+    flex: none;
+    background: var(--ink); color: #fff;
+    display: flex; align-items: center; gap: 4px;
+    padding: 8px 8px calc(16px + env(safe-area-inset-bottom));
+    z-index: 55;
+  }
+  .pager-wrap { flex: 1; min-width: 0; }
+  .pager { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .pager::-webkit-scrollbar { display: none; }
+  .slide { flex: 0 0 100%; scroll-snap-align: center; text-align: center; font-weight: 700; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 2px 6px; }
+  .dots { display: flex; justify-content: center; gap: 7px; margin-top: 6px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.35); border: none; padding: 0; }
+  .dot.on { background: #fff; }
+  .manage-btn { background: none; border: none; color: var(--ink-soft); font-size: 0.75rem; font-weight: 700; padding: 8px; font-family: var(--sans); flex-shrink: 0; letter-spacing: 0.04em; }
+
+  .sheet { position: fixed; inset: 0; background: var(--paper); z-index: 100; overflow-y: auto; -webkit-overflow-scrolling: touch; display: none; }
+  .sheet.open { display: block; }
+  .sheet-bar {
+    position: sticky; top: 0; background: var(--ink); color: #fff; z-index: 10;
+    padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .sheet-bar h2 { font-size: 1rem; }
+  .sheet-bar button { background: none; border: none; color: var(--ink-soft); font-size: 0.95rem; padding: 4px 8px; }
+  .sheet-bar button.save { color: #fff; font-weight: 700; background: var(--accent); border-radius: 8px; padding: 7px 16px; }
+  .form { padding: 14px 14px calc(50px + env(safe-area-inset-bottom)); }
+  .fgroup { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+  .fgroup h3 { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 10px; }
+  .frow { display: flex; gap: 10px; }
+  .frow > * { flex: 1; min-width: 0; }
+  .field { margin-bottom: 10px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label { display: block; font-size: 0.72rem; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+  .field input, .field select {
+    width: 100%; border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px; font-size: 0.95rem; font-family: var(--sans);
+    background: #FAFBFA; color: var(--ink); appearance: none;
+  }
+  .field input[type=date] { min-height: 42px; }
+  .field .mono { font-family: var(--mono); }
+  .sex-row { display: flex; gap: 22px; padding: 4px 2px; }
+  .tick { display: flex; align-items: center; gap: 9px; font-size: 0.92rem; font-weight: 600; }
+  .tick input { width: 22px; height: 22px; accent-color: var(--accent); }
+  .hidden { display: none; }
+
+  .sfield { margin-bottom: 12px; }
+  .sfield:last-child { margin-bottom: 2px; }
+  .s-top { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+  .s-label { font-size: 0.72rem; font-weight: 600; color: var(--muted); flex: 1; }
+  .s-val { font-family: var(--mono); font-weight: 700; font-size: 0.95rem; color: var(--accent-dark); min-width: 46px; text-align: right; }
+  .s-val.blank { color: #C2CBC8; }
+  .s-clear { background: none; border: none; color: #C2CBC8; font-size: 0.85rem; padding: 2px 6px; }
+  .s-range { width: 100%; accent-color: var(--accent); height: 30px; }
+
+  .drain-block { border: 1px dashed var(--line); border-radius: 10px; padding: 10px; margin-bottom: 10px; }
+  .drain-block .d-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; }
+  .drain-block .d-head input { flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 0.9rem; font-family: var(--sans); background: #FAFBFA; font-weight: 700; }
+  .drain-block .d-head button { background: none; border: none; color: var(--alert); font-size: 0.8rem; font-weight: 600; flex-shrink: 0; }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding-top: 2px; }
+  .toggle-row label { font-size: 0.85rem; font-weight: 600; }
+  .toggle-row input { width: 22px; height: 22px; accent-color: var(--alert); }
+  .add-drain, .danger { width: 100%; border-radius: 10px; padding: 12px; font-size: 0.9rem; font-weight: 700; border: none; }
+  .add-drain { background: var(--accent-tint); color: var(--accent-dark); }
+  .danger { background: var(--alert-tint); color: var(--alert); margin-top: 4px; }
+  .med-edit-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .med-edit-row input { flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 0.95rem; font-family: var(--sans); background: #FAFBFA; }
+  .med-edit-row button { background: none; border: none; color: var(--alert); font-size: 1rem; padding: 0 8px; }
+
+  .ward-row { display: flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 8px; }
+  .ward-row.current { border-color: var(--accent); background: var(--accent-tint); }
+  .ward-row .w-main { flex: 1; min-width: 0; font-weight: 700; font-size: 0.95rem; }
+  .ward-row .w-count { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
+  .ward-row button { background: none; border: none; font-size: 0.95rem; padding: 6px 8px; color: var(--muted); }
+  .ward-row button.w-del { color: var(--alert); }
+  .ward-add { display: flex; gap: 8px; margin: 4px 0 18px; }
+  .ward-add input { flex: 1; border: 1px solid var(--line); border-radius: 10px; padding: 12px; font-size: 0.95rem; font-family: var(--sans); background: var(--card); }
+  .ward-add button { background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 0 18px; font-weight: 700; }
+  .panel-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 700; margin: 14px 0 8px; }
+  .storage-warn { background: #F8ECE3; color: var(--amber); font-size: 0.78rem; padding: 8px 14px; text-align: center; display: none; flex: none; }
+
+  .trend-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+  .trend-card h4 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 6px; }
+  .trend-card svg { width: 100%; height: auto; display: block; color: var(--accent); }
+  .tbl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table.hist { border-collapse: collapse; font-family: var(--mono); font-size: 0.78rem; white-space: nowrap; }
+  table.hist th, table.hist td { padding: 5px 9px; text-align: right; border-bottom: 1px solid var(--line); }
+  table.hist th { color: var(--muted); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; text-align: right; }
+  table.hist td:first-child, table.hist th:first-child { text-align: left; font-weight: 700; }
+  .trend-empty { text-align: center; color: var(--muted); padding: 40px 24px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="h-left">
+    <div class="w-name" id="wardName">Ward</div>
+    <div class="count" id="count"></div>
+  </div>
+  <button class="palette-btn" id="paletteBtn" aria-label="Colour scheme">
+    <svg viewBox="0 0 24 24" width="26" height="26" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2a10 10 0 1 0 0 20c1.5 0 2.2-1 1.6-2.2-.5-1-.1-2.3 1.4-2.3H17a5 5 0 0 0 5-5C22 6.5 17.5 2 12 2Z" fill="none" stroke="currentColor" stroke-width="1.8"/>
+      <circle cx="7.5" cy="11" r="1.6" fill="#E8A0B0"/>
+      <circle cx="11" cy="7" r="1.6" fill="#9FC2E8"/>
+      <circle cx="16" cy="8.5" r="1.6" fill="#A8D8B9"/>
+      <circle cx="7.8" cy="15.5" r="1.6" fill="#E8D49F"/>
+    </svg>
+  </button>
+</header>
+<div class="storage-warn" id="storageWarn">Saving unavailable in this browser session. Data will be lost when the page closes.</div>
+
+<div class="carousel" id="carousel"></div>
+
+<button class="fab" id="addBtn" aria-label="Add patient">+</button>
+
+<div class="bottombar" id="bottombar">
+  <div class="pager-wrap">
+    <div class="pager" id="pager"></div>
+    <div class="dots" id="dots"></div>
+  </div>
+  <button class="manage-btn" id="exportBtn">EXPORT</button>
+  <button class="manage-btn" id="manageBtn">WARDS</button>
+</div>
+
+<div class="sheet" id="colourSheet">
+  <div class="sheet-bar">
+    <button id="colourClose">Close</button>
+    <h2>Colour scheme</h2>
+    <span style="width:48px"></span>
+  </div>
+  <div class="form">
+    <div class="panel-label">Theme colours</div>
+    <div class="swatches" id="swatches"></div>
+    <div class="panel-label">Custom colour</div>
+    <label class="custom-row">
+      <input type="color" id="customColour" value="#2E5C9E">
+      <span>Tap to pick any colour</span>
+    </label>
+  </div>
+</div>
+
+<div class="sheet" id="wardSheet">
+  <div class="sheet-bar">
+    <button id="wardClose">Close</button>
+    <h2>Manage wards</h2>
+    <span style="width:48px"></span>
+  </div>
+  <div class="form">
+    <div class="panel-label">Your wards</div>
+    <div id="wardRows"></div>
+    <div class="ward-add">
+      <input id="newWardName" placeholder="New ward name...">
+      <button id="addWardBtn">Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="trendSheet">
+  <div class="sheet-bar">
+    <button id="trendClose">Close</button>
+    <h2 id="trendTitle">Trends</h2>
+    <span style="width:48px"></span>
+  </div>
+  <div class="form" id="trendContent"></div>
+</div>
+
+<div class="sheet" id="sheet">
+  <div class="sheet-bar">
+    <button id="cancelBtn">Cancel</button>
+    <h2 id="sheetTitle">New patient</h2>
+    <button class="save" id="saveBtn">Save</button>
+  </div>
+  <div class="form">
+
+    <div class="fgroup">
+      <h3>Patient</h3>
+      <div class="frow">
+        <div class="field"><label>Initials</label><input id="f_initials" autocapitalize="characters" placeholder="AB"></div>
+        <div class="field"><label>Bed</label><input id="f_bed" class="mono" placeholder="12"></div>
+      </div>
+      <div id="sl_age"></div>
+      <div class="field"><label>Sex</label>
+        <div class="sex-row">
+          <label class="tick"><input type="checkbox" id="f_sexM"> Male</label>
+          <label class="tick"><input type="checkbox" id="f_sexF"> Female</label>
+        </div>
+      </div>
+      <div class="field"><label>Consultant</label>
+        <select id="f_consSel">
+          <option value=""></option>
+          <option>Mr Kadlec</option>
+          <option>Mr Bartosik</option>
+          <option>Mr Szafron</option>
+          <option>Mr Kouritas</option>
+          <option>Ms Viola</option>
+          <option value="__other">Other...</option>
+        </select>
+      </div>
+      <div class="field hidden" id="consOtherWrap"><label>Consultant name</label><input id="f_consOther"></div>
+      <div class="field"><label>Diabetic status</label>
+        <select id="f_dm">
+          <option value="">Not diabetic</option>
+          <option>Diet controlled</option>
+          <option>Oral medication</option>
+          <option>Insulin</option>
+        </select>
+      </div>
+      <div class="field"><label>Allergies</label><input id="f_allergies" placeholder="NKDA"></div>
+      <div class="field"><label>Ward</label><select id="f_ward"></select></div>
+    </div>
+
+    <div class="fgroup">
+      <h3>Operation</h3>
+      <div class="frow">
+        <div class="field"><label>Approach</label>
+          <select id="f_appr">
+            <option value=""></option>
+            <option>VATS</option>
+            <option>RATS</option>
+            <option>Thoracotomy</option>
+            <option value="__other">Other...</option>
+          </select>
+        </div>
+        <div class="field"><label>Side</label>
+          <select id="f_side">
+            <option value=""></option>
+            <option>Right</option>
+            <option>Left</option>
+          </select>
+        </div>
+      </div>
+      <div class="field hidden" id="apprOtherWrap"><label>Approach (other)</label><input id="f_apprOther"></div>
+      <div class="field"><label>Procedure</label>
+        <select id="f_opSel">
+          <option value=""></option>
+          <optgroup label="Anatomical resections">
+            <option>Upper lobectomy</option>
+            <option>Middle lobectomy</option>
+            <option>Lower lobectomy</option>
+            <option>Bilobectomy</option>
+            <option>Sleeve lobectomy</option>
+            <option>Pneumonectomy</option>
+            <option>Segmentectomy</option>
+            <option>Apical segmentectomy</option>
+            <option>Lingulectomy</option>
+          </optgroup>
+          <optgroup label="Wedge resections">
+            <option>Wedge resection</option>
+            <option>Upper lobe wedge resection</option>
+            <option>Middle lobe wedge resection</option>
+            <option>Lower lobe wedge resection</option>
+            <option>Apical wedge resection</option>
+            <option>Metastasectomy</option>
+            <option>Lung biopsy</option>
+          </optgroup>
+          <optgroup label="Pleura and pneumothorax">
+            <option>Bullectomy</option>
+            <option>Bullectomy and pleurectomy</option>
+            <option>Pleurectomy</option>
+            <option>Talc pleurodesis</option>
+            <option>Decortication</option>
+            <option>Empyema washout</option>
+            <option>Pleural biopsy</option>
+            <option>Chest drain insertion</option>
+          </optgroup>
+          <optgroup label="Mediastinum and other">
+            <option>Thymectomy</option>
+            <option>Mediastinal mass excision</option>
+            <option>Mediastinoscopy</option>
+            <option>EBUS</option>
+            <option>Chest wall resection</option>
+            <option>Rib fracture fixation</option>
+            <option>Diaphragmatic plication</option>
+            <option>Sympathectomy</option>
+            <option>Tracheostomy</option>
+          </optgroup>
+          <option value="__other">Other...</option>
+        </select>
+      </div>
+      <div class="field hidden" id="opOtherWrap"><label>Procedure (other)</label><input id="f_opOther" placeholder="Free text"></div>
+      <div class="field"><label>Date of surgery</label><input type="date" id="f_dos"></div>
+    </div>
+
+    <div class="fgroup">
+      <h3>Drains (Topaz)</h3>
+      <div id="drainForms"></div>
+      <button class="add-drain" id="addDrainBtn" type="button">+ Add drain</button>
+    </div>
+
+    <div class="fgroup">
+      <h3>This morning's observations</h3>
+      <div id="sl_obs"></div>
+      <div class="field"><label>O2 support</label><input id="f_o2" placeholder="RA / 2L NC"></div>
+    </div>
+
+    <div class="fgroup">
+      <h3>Latest bloods</h3>
+      <div class="field"><label>Date taken</label><input type="date" id="f_bldDate"></div>
+      <div id="sl_bld"></div>
+      <div class="field"><label>Latest CXR date</label><input type="date" id="f_cxr"></div>
+      <div class="field"><label>CXR comment</label><input id="f_cxrNote" placeholder="e.g. small apical space, improving"></div>
+    </div>
+
+    <div class="fgroup">
+      <h3>Medications</h3>
+      <div class="field"><label>Antibiotics</label><input id="f_abx" placeholder="None"></div>
+      <div class="field"><label>Anticoagulation</label>
+        <select id="f_acoagSel">
+          <option value=""></option>
+          <option>Prophylactic</option>
+          <option>Treatment dose</option>
+          <option>None</option>
+        </select>
+      </div>
+      <div class="field hidden" id="acoagReasonWrap"><label>Why no anticoagulation?</label><input id="f_acoagReason" placeholder="e.g. haemothorax, epidural in situ"></div>
+      <div class="field"><label>Full medication list</label></div>
+      <div id="medForms"></div>
+      <button class="add-drain" id="addMedBtn" type="button">+ Add medication</button>
+    </div>
+
+    <button class="danger" id="deleteBtn" type="button" style="display:none">Discharge / remove patient</button>
+  </div>
+</div>
+
+<script>
+// Minimal xlsx (Excel) workbook builder. No dependencies, store-only zip.
+// Exposes global XLSXBUILD.build(sheets) -> Uint8Array
+// sheets: [{ name: "Ward 1", cols: [numbers], rows: [[{v:"text",s:0|1|2},...], ...] }]
+// styles: 0 normal, 1 bold, 2 wrapped top-aligned
+var XLSXBUILD = (function () {
+  "use strict";
+
+  function xmlesc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&apos;")
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+  }
+  function colLetter(i) {
+    var s = "";
+    i = i + 1;
+    while (i > 0) { var m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); }
+    return s;
+  }
+  function sheetXML(sheet) {
+    var colsXml = "";
+    if (sheet.cols && sheet.cols.length) {
+      colsXml = "<cols>" + sheet.cols.map(function (w, i) {
+        return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>';
+      }).join("") + "</cols>";
+    }
+    var rowsXml = sheet.rows.map(function (row, ri) {
+      var cells = row.map(function (c, ci) {
+        if (c == null || c.v === "" || c.v == null) return "";
+        return '<c r="' + colLetter(ci) + (ri + 1) + '" t="inlineStr"' + (c.s ? ' s="' + c.s + '"' : "") + ">" +
+          '<is><t xml:space="preserve">' + xmlesc(c.v) + "</t></is></c>";
+      }).join("");
+      return '<row r="' + (ri + 1) + '">' + cells + "</row>";
+    }).join("");
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      colsXml + "<sheetData>" + rowsXml + "</sheetData></worksheet>";
+  }
+  function stylesXML() {
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      '<fonts count="2">' +
+        '<font><sz val="11"/><name val="Calibri"/></font>' +
+        '<font><b/><sz val="11"/><name val="Calibri"/></font>' +
+      "</fonts>" +
+      '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>' +
+      '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>' +
+      '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+      '<cellXfs count="3">' +
+        '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+        '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
+        '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf>' +
+      "</cellXfs></styleSheet>";
+  }
+  function sanitizeName(n, i) {
+    n = String(n || "").replace(/[\[\]\*\?\/\\:]/g, " ").trim().slice(0, 31);
+    return n || ("Sheet" + (i + 1));
+  }
+  function workbookXML(sheets) {
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ' +
+      'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' +
+      sheets.map(function (s, i) {
+        return '<sheet name="' + xmlesc(sanitizeName(s.name, i)) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>';
+      }).join("") + "</sheets></workbook>";
+  }
+  function workbookRels(sheets) {
+    var rels = sheets.map(function (s, i) {
+      return '<Relationship Id="rId' + (i + 1) + '" ' +
+        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" ' +
+        'Target="worksheets/sheet' + (i + 1) + '.xml"/>';
+    }).join("");
+    rels += '<Relationship Id="rId' + (sheets.length + 1) + '" ' +
+      'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>';
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + rels + "</Relationships>";
+  }
+  function rootRels() {
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+      "</Relationships>";
+  }
+  function contentTypes(sheets) {
+    var overrides = sheets.map(function (s, i) {
+      return '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ' +
+        'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
+    }).join("");
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+      '<Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+      '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+      overrides + "</Types>";
+  }
+
+  // ---- store-only zip ----
+  var CRC_TABLE = (function () {
+    var t = new Uint32Array(256);
+    for (var n = 0; n < 256; n++) {
+      var c = n;
+      for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+  function crc32(bytes) {
+    var c = 0xFFFFFFFF;
+    for (var i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+  function strBytes(s) {
+    if (typeof TextEncoder !== "undefined") return new TextEncoder().encode(s);
+    // fallback: manual UTF8
+    var out = [];
+    for (var i = 0; i < s.length; i++) {
+      var cp = s.codePointAt(i);
+      if (cp > 0xFFFF) i++;
+      if (cp < 0x80) out.push(cp);
+      else if (cp < 0x800) out.push(0xC0 | (cp >> 6), 0x80 | (cp & 63));
+      else if (cp < 0x10000) out.push(0xE0 | (cp >> 12), 0x80 | ((cp >> 6) & 63), 0x80 | (cp & 63));
+      else out.push(0xF0 | (cp >> 18), 0x80 | ((cp >> 12) & 63), 0x80 | ((cp >> 6) & 63), 0x80 | (cp & 63));
+    }
+    return new Uint8Array(out);
+  }
+  function zip(files) {
+    // files: [{name, text}]
+    var parts = [], central = [], offset = 0;
+    files.forEach(function (f) {
+      var nameB = strBytes(f.name);
+      var dataB = strBytes(f.text);
+      var crc = crc32(dataB);
+      var local = new Uint8Array(30 + nameB.length);
+      var dv = new DataView(local.buffer);
+      dv.setUint32(0, 0x04034b50, true);
+      dv.setUint16(4, 20, true);        // version needed
+      dv.setUint16(6, 0x0800, true);    // UTF8 flag
+      dv.setUint16(8, 0, true);         // store
+      dv.setUint16(10, 0, true);        // time
+      dv.setUint16(12, 0x21, true);     // date (1 Jan 1980)
+      dv.setUint32(14, crc, true);
+      dv.setUint32(18, dataB.length, true);
+      dv.setUint32(22, dataB.length, true);
+      dv.setUint16(26, nameB.length, true);
+      dv.setUint16(28, 0, true);
+      local.set(nameB, 30);
+      parts.push(local, dataB);
+
+      var cd = new Uint8Array(46 + nameB.length);
+      var cv = new DataView(cd.buffer);
+      cv.setUint32(0, 0x02014b50, true);
+      cv.setUint16(4, 20, true);
+      cv.setUint16(6, 20, true);
+      cv.setUint16(8, 0x0800, true);
+      cv.setUint16(10, 0, true);
+      cv.setUint16(12, 0, true);
+      cv.setUint16(14, 0x21, true);
+      cv.setUint32(16, crc, true);
+      cv.setUint32(20, dataB.length, true);
+      cv.setUint32(24, dataB.length, true);
+      cv.setUint16(28, nameB.length, true);
+      cv.setUint16(30, 0, true);
+      cv.setUint16(32, 0, true);
+      cv.setUint16(34, 0, true);
+      cv.setUint16(36, 0, true);
+      cv.setUint32(38, 0, true);
+      cv.setUint32(42, offset, true);
+      cd.set(nameB, 46);
+      central.push(cd);
+
+      offset += local.length + dataB.length;
+    });
+    var cdSize = 0;
+    central.forEach(function (c) { cdSize += c.length; });
+    var end = new Uint8Array(22);
+    var ev = new DataView(end.buffer);
+    ev.setUint32(0, 0x06054b50, true);
+    ev.setUint16(8, files.length, true);
+    ev.setUint16(10, files.length, true);
+    ev.setUint32(12, cdSize, true);
+    ev.setUint32(16, offset, true);
+    var total = offset + cdSize + 22;
+    var out = new Uint8Array(total);
+    var pos = 0;
+    parts.forEach(function (p) { out.set(p, pos); pos += p.length; });
+    central.forEach(function (c) { out.set(c, pos); pos += c.length; });
+    out.set(end, pos);
+    return out;
+  }
+
+  function build(sheets) {
+    var files = [
+      { name: "[Content_Types].xml", text: contentTypes(sheets) },
+      { name: "_rels/.rels", text: rootRels() },
+      { name: "xl/workbook.xml", text: workbookXML(sheets) },
+      { name: "xl/_rels/workbook.xml.rels", text: workbookRels(sheets) },
+      { name: "xl/styles.xml", text: stylesXML() }
+    ];
+    sheets.forEach(function (s, i) {
+      files.push({ name: "xl/worksheets/sheet" + (i + 1) + ".xml", text: sheetXML(s) });
+    });
+    return zip(files);
+  }
+
+  return { build: build };
+})();
+
+</script>
+<script>
+(function () {
+  "use strict";
+
+  // ---------- storage ----------
+  var KEY = "thoracic_ward_list_v1";
+  var memStore = null;
+  var canStore = (function () {
+    try { localStorage.setItem("__t", "1"); localStorage.removeItem("__t"); return true; }
+    catch (e) { return false; }
+  })();
+  if (!canStore) document.getElementById("storageWarn").style.display = "block";
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  function load() {
+    var raw = null;
+    try { raw = canStore ? localStorage.getItem(KEY) : memStore; } catch (e) {}
+    var parsed = null;
+    try { parsed = raw ? JSON.parse(raw) : null; } catch (e) {}
+    var out;
+    if (Array.isArray(parsed)) {
+      var wid = uid();
+      parsed.forEach(function (p) {
+        p.ward = wid;
+        p.consSel = ""; p.consOther = p.cons || "";
+        if (p.cons) p.consSel = "__other";
+        p.appr = ""; p.apprOther = ""; p.side = ""; p.opDetail = p.op || "";
+      });
+      out = { theme: "navy", wards: [{ id: wid, name: "Ward 1" }], currentWard: wid, patients: parsed };
+    } else if (parsed && parsed.wards) {
+      out = parsed;
+    } else {
+      var w = uid();
+      out = { theme: "navy", wards: [{ id: w, name: "Ward 1" }], currentWard: w, patients: [] };
+    }
+    // ensure every drain has a stable id (needed for trend lines)
+    out.patients.forEach(function (p) {
+      (p.drains || []).forEach(function (d) { if (!d.id) d.id = uid(); });
+      // migrate old free text procedure into the dropdown structure
+      if (p.opSel === undefined) {
+        p.opSel = p.opDetail ? "__other" : "";
+        p.opOther = p.opDetail || "";
+      }
+      // migrate old free text anticoagulation into the dose select
+      if (p.acoagSel === undefined) {
+        var t = (p.acoag || "").toLowerCase();
+        p.acoagSel = !t ? "" : /proph/.test(t) ? "Prophylactic" : /treat/.test(t) ? "Treatment dose" : /^(none|nil|not )/.test(t) ? "None" : "";
+        p.acoagReason = (p.acoagSel === "" && p.acoag) ? p.acoag : "";
+      }
+    });
+    // migrate old named themes to a colour value
+    if (!out.themeColor) {
+      var legacy = { navy: "#2E5C9E", maroon: "#8A2333", emerald: "#167A50" };
+      out.themeColor = legacy[out.theme] || "#2E5C9E";
+    }
+    return out;
+  }
+
+  var data = load();
+  var editingId = null;
+  var draftDrains = [];
+  var draftMeds = [];
+  var sliderVals = {};
+  var expanded = {};   // patient id -> 0 closed, 1 drains+jobs, 2 everything
+  var notesOpen = {};  // patient id -> bool
+  var notesTimer = null;
+
+  function persist() {
+    var raw = JSON.stringify(data);
+    if (canStore) { try { localStorage.setItem(KEY, raw); } catch (e) {} }
+    else memStore = raw;
+  }
+
+  // ---------- helpers ----------
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function todayISO() {
+    var d = new Date();
+    var m = d.getMonth() + 1, day = d.getDate();
+    return d.getFullYear() + "-" + (m < 10 ? "0" : "") + m + "-" + (day < 10 ? "0" : "") + day;
+  }
+  function daysSince(iso) {
+    if (!iso) return null;
+    var d = new Date(iso + "T00:00:00");
+    if (isNaN(d)) return null;
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return Math.round((today - d) / 86400000);
+  }
+  function fmtDate(iso) {
+    if (!iso) return "";
+    var d = new Date(iso + "T00:00:00");
+    if (isNaN(d)) return "";
+    var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return d.getDate() + " " + months[d.getMonth()];
+  }
+  function ago(iso) {
+    var n = daysSince(iso);
+    if (n === null) return "";
+    if (n === 0) return "today";
+    if (n === 1) return "1d ago";
+    return n + "d ago";
+  }
+  function bedSort(a, b) {
+    var na = parseFloat(a.bed), nb = parseFloat(b.bed);
+    if (!isNaN(na) && !isNaN(nb) && na !== nb) return na - nb;
+    return String(a.bed).localeCompare(String(b.bed), undefined, { numeric: true });
+  }
+  var CONS_INITIALS = { "Mr Kadlec": "JK", "Mr Bartosik": "WB", "Mr Szafron": "BS", "Mr Kouritas": "VK", "Ms Viola": "CV" };
+  function consInitials(p) {
+    if (p.consSel && p.consSel !== "__other") return CONS_INITIALS[p.consSel] || "";
+    var name = (p.consOther || "").trim();
+    if (!name) return "";
+    var words = name.split(/\s+/).filter(function (w) {
+      return !/^(mr|mrs|ms|miss|dr|prof|professor)\.?$/i.test(w);
+    });
+    if (!words.length) return "";
+    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+    return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+  }
+  function consultantOf(p) { return p.consSel === "__other" ? p.consOther : p.consSel; }
+  function acoagText(p) {
+    if (p.acoagSel === "None") return "None" + (p.acoagReason ? " \u2013 " + p.acoagReason : "");
+    return p.acoagSel || p.acoagReason || "";
+  }
+  function opText(p) {
+    var appr = p.appr === "__other" ? p.apprOther : p.appr;
+    var proc = p.opSel === "__other" ? p.opOther : p.opSel;
+    return [appr, p.side, proc].filter(Boolean).join(" ");
+  }
+  function currentWardObj() { return data.wards.find(function (w) { return w.id === data.currentWard; }) || data.wards[0]; }
+  function wardIndex() {
+    var i = data.wards.findIndex(function (w) { return w.id === data.currentWard; });
+    return i < 0 ? 0 : i;
+  }
+
+  // ---------- colour theme engine ----------
+  function hexToHsl(hex) {
+    var m = /^#?([0-9a-f]{6})$/i.exec(hex);
+    if (!m) return { h: 215, s: 0.55, l: 0.4 };
+    var n = parseInt(m[1], 16);
+    var r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+    var max = Math.max(r, g, b), min = Math.min(r, g, b);
+    var h = 0, s = 0, l = (max + min) / 2;
+    if (max !== min) {
+      var d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max === r) h = ((g - b) / d + (g < b ? 6 : 0));
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h *= 60;
+    }
+    return { h: h, s: s, l: l };
+  }
+  function hslToHex(h, s, l) {
+    h = ((h % 360) + 360) % 360;
+    s = Math.max(0, Math.min(1, s)); l = Math.max(0, Math.min(1, l));
+    var c = (1 - Math.abs(2 * l - 1)) * s;
+    var x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    var m = l - c / 2, r = 0, g = 0, b = 0;
+    if (h < 60) { r = c; g = x; } else if (h < 120) { r = x; g = c; }
+    else if (h < 180) { g = c; b = x; } else if (h < 240) { g = x; b = c; }
+    else if (h < 300) { r = x; b = c; } else { r = c; b = x; }
+    function q(v) { v = Math.round((v + m) * 255); return (v < 16 ? "0" : "") + v.toString(16); }
+    return "#" + q(r) + q(g) + q(b);
+  }
+  var PALETTE = [
+    "#7A1F2B","#B5484D","#C97B67","#C98A2E","#8A6D1F","#6B4A2E",
+    "#3E5F3A","#167A50","#4E9C7B","#79B8A0","#2E6E63","#1F5F5B",
+    "#14335C","#2E5C9E","#4E7FB8","#7FA6C9","#365D7A","#22677D",
+    "#4A2B5C","#6E4E9E","#9E7FB8","#B85C8A","#D68AA6","#7A3B5C"
+  ];
+  function applyTheme() {
+    var hex = data.themeColor || "#2E5C9E";
+    var hsl = hexToHsl(hex);
+    var rt = document.documentElement.style;
+    var ink = hslToHex(hsl.h, Math.min(hsl.s, 0.5), 0.13);
+    rt.setProperty("--accent", hex);
+    rt.setProperty("--accent-dark", hslToHex(hsl.h, hsl.s, Math.max(0.12, hsl.l * 0.72)));
+    rt.setProperty("--accent-tint", hslToHex(hsl.h, Math.min(hsl.s, 0.45), 0.93));
+    rt.setProperty("--ink", ink);
+    rt.setProperty("--ink-soft", hslToHex(hsl.h, Math.min(hsl.s, 0.3), 0.68));
+    rt.setProperty("--paper", hslToHex(hsl.h, Math.min(hsl.s, 0.2), 0.955));
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", ink);
+    var custom = document.getElementById("customColour");
+    if (custom) custom.value = hex;
+    document.querySelectorAll(".swatch").forEach(function (b) {
+      b.classList.toggle("sel", b.getAttribute("data-c").toLowerCase() === hex.toLowerCase());
+    });
+  }
+  function setThemeColor(hex) {
+    data.themeColor = hex;
+    applyTheme(); persist();
+  }
+  var colourSheet = document.getElementById("colourSheet");
+  document.getElementById("swatches").innerHTML = PALETTE.map(function (c) {
+    return '<button class="swatch" data-c="' + c + '" style="background:' + c + '" aria-label="' + c + '"></button>';
+  }).join("");
+  document.getElementById("paletteBtn").addEventListener("click", function () {
+    applyTheme();
+    colourSheet.classList.add("open");
+  });
+  document.getElementById("colourClose").addEventListener("click", function () {
+    colourSheet.classList.remove("open");
+  });
+  document.getElementById("swatches").addEventListener("click", function (e) {
+    var c = e.target.getAttribute("data-c");
+    if (c) setThemeColor(c);
+  });
+  document.getElementById("customColour").addEventListener("input", function (e) {
+    setThemeColor(e.target.value);
+  });
+
+  // ---------- sliders ----------
+  var SL = {
+    age:  { min: 16,  max: 100, step: 1,   def: 65,   dec: 0, label: "Age" },
+    temp: { min: 34,  max: 41,  step: 0.1, def: 36.8, dec: 1, label: "Temp \u00B0C" },
+    hr:   { min: 30,  max: 180, step: 1,   def: 75,   dec: 0, label: "Heart rate" },
+    sys:  { min: 60,  max: 220, step: 2,   def: 120,  dec: 0, label: "BP systolic" },
+    dia:  { min: 30,  max: 130, step: 2,   def: 70,   dec: 0, label: "BP diastolic" },
+    rr:   { min: 6,   max: 40,  step: 1,   def: 16,   dec: 0, label: "Resp rate" },
+    spo2: { min: 70,  max: 100, step: 1,   def: 96,   dec: 0, label: "SpO2 %" },
+    hb:   { min: 40,  max: 200, step: 1,   def: 130,  dec: 0, label: "Hb" },
+    wcc:  { min: 0,   max: 40,  step: 0.1, def: 8,    dec: 1, label: "WCC" },
+    crp:  { min: 0,   max: 400, step: 1,   def: 5,    dec: 0, label: "CRP" },
+    na:   { min: 115, max: 160, step: 1,   def: 140,  dec: 0, label: "Na" },
+    k:    { min: 2,   max: 7,   step: 0.1, def: 4.2,  dec: 1, label: "K" },
+    cr:   { min: 30,  max: 500, step: 1,   def: 80,   dec: 0, label: "Creatinine" },
+    airLeak: { min: 0, max: 5000, step: 10, def: 0,   dec: 0, label: "Air leak ml/min" },
+    output:  { min: 0, max: 1500, step: 10, def: 0,   dec: 0, label: "Output ml / 24h" }
+  };
+  function fmtSlider(key, v) {
+    var c = SL[key];
+    var n = parseFloat(v);
+    if (isNaN(n)) return "";
+    return c.dec ? n.toFixed(c.dec) : String(Math.round(n));
+  }
+  function sliderRow(key, cur, extraAttrs) {
+    var c = SL[key];
+    var set = cur !== "" && cur != null && !isNaN(parseFloat(cur));
+    var val = set ? parseFloat(cur) : c.def;
+    return '<div class="sfield">' +
+      '<div class="s-top"><span class="s-label">' + c.label + '</span>' +
+      '<span class="s-val' + (set ? "" : " blank") + '">' + (set ? fmtSlider(key, cur) : "\u2013") + "</span>" +
+      '<button type="button" class="s-clear">\u2715</button></div>' +
+      '<input type="range" class="s-range" min="' + c.min + '" max="' + c.max + '" step="' + c.step +
+      '" value="' + val + '" data-key="' + key + '" ' + (extraAttrs || "") + ">" +
+    "</div>";
+  }
+  function renderPatientSliders() {
+    document.getElementById("sl_age").innerHTML = sliderRow("age", sliderVals.age, 'data-sv="age"');
+    document.getElementById("sl_obs").innerHTML =
+      ["temp","hr","sys","dia","rr","spo2"].map(function (k) { return sliderRow(k, sliderVals[k], 'data-sv="' + k + '"'); }).join("");
+    document.getElementById("sl_bld").innerHTML =
+      ["hb","wcc","crp","na","k","cr"].map(function (k) { return sliderRow(k, sliderVals[k], 'data-sv="' + k + '"'); }).join("");
+  }
+  document.addEventListener("input", function (e) {
+    var el = e.target;
+    if (!el.classList || !el.classList.contains("s-range")) return;
+    var key = el.getAttribute("data-key");
+    var v = fmtSlider(key, el.value);
+    var wrap = el.closest(".sfield");
+    var valEl = wrap.querySelector(".s-val");
+    valEl.textContent = v;
+    valEl.classList.remove("blank");
+    var sv = el.getAttribute("data-sv");
+    if (sv) sliderVals[sv] = v;
+    var df = el.getAttribute("data-df");
+    if (df != null) draftDrains[+el.getAttribute("data-di")][df] = v;
+  });
+  document.addEventListener("click", function (e) {
+    var el = e.target;
+    if (!el.classList || !el.classList.contains("s-clear")) return;
+    var wrap = el.closest(".sfield");
+    var range = wrap.querySelector(".s-range");
+    var key = range.getAttribute("data-key");
+    range.value = SL[key].def;
+    var valEl = wrap.querySelector(".s-val");
+    valEl.textContent = "\u2013";
+    valEl.classList.add("blank");
+    var sv = range.getAttribute("data-sv");
+    if (sv) sliderVals[sv] = "";
+    var df = range.getAttribute("data-df");
+    if (df != null) draftDrains[+range.getAttribute("data-di")][df] = "";
+  });
+
+  // ---------- cards ----------
+  function tile(label, val) {
+    var has = val !== "" && val != null;
+    return '<div class="tile"><div class="t-label">' + label + '</div>' +
+      '<div class="t-val' + (has ? "" : " blank") + '">' + (has ? esc(val) : "\u2013") + "</div></div>";
+  }
+
+  function drainLine(d, i) {
+    var name = d.name ? d.name : "Drain " + (i + 1);
+    var bits = ['<span class="d-name">' + esc(name) + "</span>"];
+    var leak = d.airLeak !== "" && d.airLeak != null ? parseFloat(d.airLeak) : null;
+    if (leak === null || isNaN(leak)) {
+      bits.push('<span class="d-item"><span>Leak</span> <b>\u2013</b></span>');
+    } else if (leak > 0) {
+      bits.push('<span class="d-item"><span>Leak</span> <b class="leak">' + esc(d.airLeak) + "</b> ml/min</span>");
+    } else {
+      bits.push('<span class="d-item"><span>Leak</span> <b>0</b> ml/min</span>');
+    }
+    bits.push('<span class="d-item"><span>Suction</span> <b>' + (d.suction ? esc(d.suction) : "off") + "</b></span>");
+    var out = (d.output !== "" && d.output != null) ? esc(d.output) + " ml" : "\u2013";
+    var fluid = d.fluid ? " " + esc(d.fluid).toLowerCase() : "";
+    bits.push('<span class="d-item"><span>Output</span> <b>' + out + "</b>" + fluid + "</span>");
+    if (d.clamped) bits.push('<span class="flag-clamped">CLAMPED</span>');
+    return '<div class="drain">' + bits.join("") + "</div>";
+  }
+
+  function card(p) {
+    var lvl = expanded[p.id] || 0;
+    var pod = daysSince(p.dos);
+    var podTxt = pod === null ? "" : "D" + pod;
+    var op = opText(p);
+    var ci = consInitials(p);
+
+    var head =
+      '<div class="head" data-act="toggle" data-p="' + p.id + '">' +
+        '<div class="bed"><span class="label">Bed</span><span class="num">' + esc(p.bed || "?") + "</span></div>" +
+        '<div class="head-mid">' +
+          '<div class="pt-line">' + esc(p.initials || "?") +
+            (p.age ? ' <span class="age">' + esc(p.age) + esc(p.sex || "y") + "</span>" : "") + "</div>" +
+          '<div class="op">' + esc(op || "No operation recorded") + "</div>" +
+        "</div>" +
+        (ci ? '<span class="cons-badge">' + esc(ci) + "</span>" : "") +
+        (podTxt ? '<span class="pod">' + podTxt + "</span>" : "") +
+        '<span class="chev-card">&#9660;</span>' +
+      "</div>";
+
+    if (lvl === 0) return '<div class="card">' + head + "</div>";
+
+    var cons = consultantOf(p);
+    var dmChip = p.dm ? '<span class="chip' + (p.dm === "Insulin" ? " warn" : "") + '">DM: ' + esc(p.dm) + "</span>" : "";
+    var allergyChip = p.allergies ? '<span class="chip danger">Allergy: ' + esc(p.allergies) + "</span>" : "";
+    var consChip = cons ? '<span class="chip">' + esc(cons) + "</span>" : "";
+    var drainsHtml = (p.drains && p.drains.length) ? p.drains.map(drainLine).join("") : '<div class="no-drains">No drains in situ</div>';
+
+    var middle = "";
+    if (lvl === 2) {
+      var obsHas = [p.temp, p.hr, p.bp, p.rr, p.spo2, p.o2].some(function (v) { return v; });
+      var obs = obsHas
+        ? '<div class="tiles">' + tile("T\u00B0", p.temp) + tile("HR", p.hr) + tile("BP", p.bp) +
+          tile("RR", p.rr) + tile("SpO2", p.spo2) + tile("O2", p.o2) + "</div>"
+        : '<div class="none-txt">Not recorded</div>';
+      var cxrN = daysSince(p.cxr);
+      var cxrTxt = p.cxr
+        ? "<b>" + fmtDate(p.cxr) + "</b> (" + (cxrN >= 2 ? '<span class="stale">' + ago(p.cxr) + "</span>" : ago(p.cxr)) + ")"
+        : "<b>\u2013</b>";
+      var bldTxt = p.bldDate ? " \u00B7 " + fmtDate(p.bldDate) + " (" + ago(p.bldDate) + ")" : "";
+      var medList = (p.meds && p.meds.length)
+        ? p.meds.map(function (m) { return '<div class="med-item">' + esc(m) + "</div>"; }).join("") : "";
+      middle =
+        '<div class="section"><div class="sec-label">Obs (this morning)</div>' + obs + "</div>" +
+        '<div class="section"><div class="sec-label">Bloods' + bldTxt + "</div>" +
+          '<div class="tiles">' +
+            tile("Hb", p.hb) + tile("WCC", p.wcc) + tile("CRP", p.crp) +
+            tile("Na", p.na) + tile("K", p.k) + tile("Cr", p.cr) +
+          "</div>" +
+          '<div class="meta-row"><span class="meta-item">Latest CXR: ' + cxrTxt + "</span></div>" +
+          (p.cxrNote ? '<div class="cxr-note">' + esc(p.cxrNote) + "</div>" : "") +
+        "</div>" +
+        '<div class="section"><div class="sec-label">Medications</div>' +
+          '<div class="med-row allergy-line"><span class="m-label">Allergies</span>' +
+            (p.allergies ? "<b>" + esc(p.allergies) + "</b>" : '<span class="none-txt">not recorded</span>') + "</div>" +
+          '<div class="med-row"><span class="m-label">Abx</span>' + (p.abx ? esc(p.abx) : '<span class="none-txt">none</span>') + "</div>" +
+          '<div class="med-row"><span class="m-label">Anticoag</span>' +
+            (acoagText(p)
+              ? (p.acoagSel === "None" ? '<b style="color:var(--amber)">' + esc(acoagText(p)) + "</b>" : esc(acoagText(p)))
+              : '<span class="none-txt">not recorded</span>') + "</div>" +
+          medList +
+        "</div>";
+    }
+
+    var moreRow = '<div class="more-row" data-act="more" data-p="' + p.id + '">' +
+      (lvl === 2 ? "Data \u25B4" : "Data \u25BE") + "</div>";
+
+    var nOpen = !!notesOpen[p.id];
+    var notesRow = '<div class="more-row" data-act="notestoggle" data-p="' + p.id + '">' +
+      (nOpen ? "Notes \u25B4" : "Notes \u25BE") + "</div>";
+    var notesBlock = nOpen
+      ? '<div class="section notes-area"><div class="sec-label">Notes</div>' +
+        '<textarea data-notes="' + p.id + '" placeholder="Free text notes...">' + esc(p.notes || "") + "</textarea></div>"
+      : "";
+
+    var jobs = (p.jobs || []).map(function (j) {
+      return '<div class="job' + (j.done ? " done" : "") + '">' +
+        '<input type="checkbox" ' + (j.done ? "checked" : "") + ' data-act="togglejob" data-p="' + p.id + '" data-j="' + j.id + '">' +
+        '<span class="j-text">' + esc(j.text) + "</span>" +
+        '<button class="j-del" data-act="deljob" data-p="' + p.id + '" data-j="' + j.id + '">\u2715</button></div>';
+    }).join("");
+
+    var body =
+      '<div class="body">' +
+        '<div class="section"><div class="id-row">' + consChip + dmChip + allergyChip +
+          '<span class="id-btns">' +
+            '<button class="edit-btn" data-act="trends" data-p="' + p.id + '">Trends</button>' +
+            '<button class="edit-btn solid" data-act="edit" data-p="' + p.id + '">Edit</button>' +
+          "</span>" +
+        "</div></div>" +
+        '<div class="section"><div class="sec-label">Drains</div>' + drainsHtml + "</div>" +
+        moreRow +
+        middle +
+        notesRow +
+        notesBlock +
+        '<div class="section jobs"><div class="sec-label">Jobs</div>' + jobs +
+          '<div class="job-add"><input placeholder="Add a job..." data-jobinput="' + p.id + '">' +
+          '<button data-act="addjob" data-p="' + p.id + '">Add</button></div>' +
+        "</div>" +
+      "</div>";
+
+    return '<div class="card open">' + head + body + "</div>";
+  }
+
+  // ---------- carousel rendering ----------
+  var carouselEl = document.getElementById("carousel");
+  var carIgnore = false;
+  var carTimer = null;
+
+  function updateHeader() {
+    var n = data.patients.filter(function (p) { return p.ward === data.currentWard; }).length;
+    document.getElementById("wardName").textContent = currentWardObj().name;
+    document.getElementById("count").textContent = n + (n === 1 ? " patient" : " patients");
+  }
+
+  function render() {
+    // capture per ward scroll positions
+    var scrolls = {};
+    carouselEl.querySelectorAll(".page").forEach(function (pg) {
+      scrolls[pg.getAttribute("data-ward")] = pg.scrollTop;
+    });
+    carouselEl.innerHTML = data.wards.map(function (w) {
+      var pts = data.patients.filter(function (p) { return p.ward === w.id; }).sort(bedSort);
+      var inner = pts.length
+        ? pts.map(card).join("")
+        : '<div class="empty"><strong>No patients on this ward</strong>Tap + to add a patient, or swipe to change ward.</div>';
+      return '<div class="page" data-ward="' + w.id + '">' + inner + "</div>";
+    }).join("");
+    carouselEl.querySelectorAll(".page").forEach(function (pg) {
+      var s = scrolls[pg.getAttribute("data-ward")];
+      if (s) pg.scrollTop = s;
+    });
+    carIgnore = true;
+    carouselEl.scrollLeft = wardIndex() * carouselEl.clientWidth;
+    setTimeout(function () { carIgnore = false; }, 120);
+    updateHeader();
+    updateDots();
+  }
+
+  function setCurrentWard(id) {
+    if (id === data.currentWard) return;
+    data.currentWard = id;
+    persist();
+    updateHeader();
+    updateDots();
+    snapPagerToCurrent(true);
+  }
+
+  carouselEl.addEventListener("scroll", function () {
+    if (carIgnore) return;
+    clearTimeout(carTimer);
+    carTimer = setTimeout(function () {
+      var w = carouselEl.clientWidth || 1;
+      var idx = Math.round(carouselEl.scrollLeft / w);
+      idx = Math.max(0, Math.min(data.wards.length - 1, idx));
+      if (data.wards[idx]) setCurrentWard(data.wards[idx].id);
+    }, 90);
+  });
+
+  function scrollCarouselToCurrent(smooth) {
+    carIgnore = true;
+    var left = wardIndex() * carouselEl.clientWidth;
+    if (smooth) carouselEl.scrollTo({ left: left, behavior: "smooth" });
+    else carouselEl.scrollLeft = left;
+    setTimeout(function () { carIgnore = false; }, smooth ? 450 : 120);
+  }
+
+  // ---------- bottom pager ----------
+  var pagerEl = document.getElementById("pager");
+  var dotsEl = document.getElementById("dots");
+  var pagerIgnore = false;
+  var pagerTimer = null;
+
+  function renderPager() {
+    pagerEl.innerHTML = data.wards.map(function (w) {
+      return '<div class="slide">' + esc(w.name) + "</div>";
+    }).join("");
+    dotsEl.innerHTML = data.wards.map(function (w, i) {
+      return '<button class="dot" data-di="' + i + '" aria-label="Ward ' + (i + 1) + '"></button>';
+    }).join("");
+    snapPagerToCurrent(false);
+    updateDots();
+  }
+  function snapPagerToCurrent(smooth) {
+    pagerIgnore = true;
+    var left = wardIndex() * pagerEl.clientWidth;
+    if (smooth) pagerEl.scrollTo({ left: left, behavior: "smooth" });
+    else pagerEl.scrollLeft = left;
+    setTimeout(function () { pagerIgnore = false; }, smooth ? 400 : 120);
+  }
+  function updateDots() {
+    var idx = wardIndex();
+    dotsEl.querySelectorAll(".dot").forEach(function (d, i) {
+      d.classList.toggle("on", i === idx);
+    });
+  }
+  pagerEl.addEventListener("scroll", function () {
+    if (pagerIgnore) return;
+    clearTimeout(pagerTimer);
+    pagerTimer = setTimeout(function () {
+      var w = pagerEl.clientWidth || 1;
+      var idx = Math.round(pagerEl.scrollLeft / w);
+      idx = Math.max(0, Math.min(data.wards.length - 1, idx));
+      var ward = data.wards[idx];
+      if (ward && ward.id !== data.currentWard) {
+        data.currentWard = ward.id;
+        persist(); updateHeader(); updateDots();
+        scrollCarouselToCurrent(true);
+      }
+    }, 90);
+  });
+  dotsEl.addEventListener("click", function (e) {
+    var di = e.target.getAttribute("data-di");
+    if (di == null) return;
+    var ward = data.wards[+di];
+    if (!ward) return;
+    setCurrentWard(ward.id);
+    scrollCarouselToCurrent(true);
+  });
+  window.addEventListener("resize", function () {
+    scrollCarouselToCurrent(false);
+    snapPagerToCurrent(false);
+  });
+
+  // ---------- Excel export ----------
+  function exportRows(w) {
+    var headers = ["Bed","Initials","Age","Consultant","Operation","DOS","POD","DM","Allergies",
+      "Drains","Obs","Bloods","CXR","Antibiotics","Anticoagulation","Medications","Outstanding jobs","Notes"];
+    var rows = [
+      [{ v: w.name + " \u2013 " + fmtDate(todayISO()) + " " + new Date().getFullYear(), s: 1 }],
+      headers.map(function (h) { return { v: h, s: 1 }; })
+    ];
+    var pts = data.patients.filter(function (p) { return p.ward === w.id; }).sort(bedSort);
+    pts.forEach(function (p) {
+      var pod = daysSince(p.dos);
+      var drains = (p.drains || []).map(function (d, i) {
+        var bits = [];
+        if (d.airLeak !== "" && d.airLeak != null) bits.push("leak " + d.airLeak + " ml/min");
+        if (d.output !== "" && d.output != null) bits.push("out " + d.output + " ml" + (d.fluid ? " " + d.fluid.toLowerCase() : ""));
+        if (d.suction) bits.push("suction " + d.suction);
+        if (d.clamped) bits.push("CLAMPED");
+        return (d.name || "Drain " + (i + 1)) + ": " + (bits.join(", ") || "no readings");
+      }).join("\n");
+      var obs = [
+        p.temp ? "T " + p.temp : "", p.hr ? "HR " + p.hr : "", p.bp ? "BP " + p.bp : "",
+        p.rr ? "RR " + p.rr : "", p.spo2 ? "SpO2 " + p.spo2 + "%" : "", p.o2 || ""
+      ].filter(Boolean).join("  ");
+      var bloods = [
+        p.hb ? "Hb " + p.hb : "", p.wcc ? "WCC " + p.wcc : "", p.crp ? "CRP " + p.crp : "",
+        p.na ? "Na " + p.na : "", p.k ? "K " + p.k : "", p.cr ? "Cr " + p.cr : ""
+      ].filter(Boolean).join("  ") + (p.bldDate ? " (" + fmtDate(p.bldDate) + ")" : "");
+      var cxr = (p.cxr ? fmtDate(p.cxr) : "") + (p.cxrNote ? (p.cxr ? " \u2013 " : "") + p.cxrNote : "");
+      var jobs = (p.jobs || []).filter(function (j) { return !j.done; }).map(function (j) { return j.text; }).join("; ");
+      var row = [
+        p.bed || "", p.initials || "", (p.age || "") + (p.age ? (p.sex || "") : ""),
+        consultantOf(p) || "", opText(p) || "", p.dos ? fmtDate(p.dos) : "",
+        pod === null ? "" : "D" + pod, p.dm || "", p.allergies || "",
+        drains, obs, bloods.trim(), cxr, p.abx || "", acoagText(p),
+        (p.meds || []).join("; "), jobs, p.notes || ""
+      ];
+      rows.push(row.map(function (v) { return { v: v, s: 2 }; }));
+    });
+    return {
+      name: w.name,
+      cols: [6, 9, 6, 14, 28, 10, 5, 12, 14, 44, 32, 36, 26, 16, 24, 32, 38, 42],
+      rows: rows
+    };
+  }
+  document.getElementById("exportBtn").addEventListener("click", function () {
+    try {
+      var sheets = data.wards.map(exportRows);
+      var buf = XLSXBUILD.build(sheets);
+      var blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      var fname = "ward-list-" + todayISO() + ".xlsx";
+      var file = null;
+      try { file = new File([blob], fname, { type: blob.type }); } catch (e) {}
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: "Ward list" }).catch(function () {});
+        return;
+      }
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = fname;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+    } catch (err) {
+      alert("Export failed: " + err.message);
+    }
+  });
+
+  // ---------- ward management ----------
+  var wardSheet = document.getElementById("wardSheet");
+  function renderWards() {
+    document.getElementById("wardRows").innerHTML = data.wards.map(function (w) {
+      var n = data.patients.filter(function (p) { return p.ward === w.id; }).length;
+      return '<div class="ward-row' + (w.id === data.currentWard ? " current" : "") + '" data-w="' + w.id + '">' +
+        '<div class="w-main">' + esc(w.name) + "</div>" +
+        '<span class="w-count">' + n + " pt" + (n === 1 ? "" : "s") + "</span>" +
+        '<button data-wact="rename" data-w="' + w.id + '">&#9998;</button>' +
+        '<button class="w-del" data-wact="delete" data-w="' + w.id + '">&#10005;</button>' +
+      "</div>";
+    }).join("");
+  }
+  document.getElementById("manageBtn").addEventListener("click", function () {
+    renderWards(); wardSheet.classList.add("open");
+  });
+  document.getElementById("wardClose").addEventListener("click", function () {
+    wardSheet.classList.remove("open");
+  });
+  document.getElementById("addWardBtn").addEventListener("click", function () {
+    var input = document.getElementById("newWardName");
+    var name = input.value.trim();
+    if (!name) return;
+    var w = { id: uid(), name: name };
+    data.wards.push(w);
+    data.currentWard = w.id;
+    input.value = "";
+    persist(); renderWards(); renderPager(); render();
+  });
+  document.getElementById("wardRows").addEventListener("click", function (e) {
+    var act = e.target.getAttribute("data-wact");
+    var wid = e.target.getAttribute("data-w") || (e.target.closest(".ward-row") && e.target.closest(".ward-row").getAttribute("data-w"));
+    if (!wid) return;
+    var w = data.wards.find(function (x) { return x.id === wid; });
+    if (!w) return;
+
+    if (act === "rename") {
+      var name = prompt("Rename ward", w.name);
+      if (name && name.trim()) { w.name = name.trim(); persist(); renderWards(); renderPager(); render(); }
+      return;
+    }
+    if (act === "delete") {
+      var n = data.patients.filter(function (p) { return p.ward === wid; }).length;
+      if (data.wards.length === 1) { alert("You need at least one ward."); return; }
+      if (n > 0) { alert("This ward still has " + n + " patient" + (n === 1 ? "" : "s") + ". Move or discharge them first."); return; }
+      if (!confirm('Delete ward "' + w.name + '"?')) return;
+      data.wards = data.wards.filter(function (x) { return x.id !== wid; });
+      if (data.currentWard === wid) data.currentWard = data.wards[0].id;
+      persist(); renderWards(); renderPager(); render();
+      return;
+    }
+    data.currentWard = wid;
+    persist(); renderWards(); render();
+    snapPagerToCurrent(false);
+    wardSheet.classList.remove("open");
+  });
+
+  // ---------- trends ----------
+  var trendSheet = document.getElementById("trendSheet");
+  document.getElementById("trendClose").addEventListener("click", function () {
+    trendSheet.classList.remove("open");
+  });
+
+  function snapshot(p) {
+    p.history = p.history || {};
+    p.history[todayISO()] = {
+      temp: p.temp || "", hr: p.hr || "", bp: p.bp || "", rr: p.rr || "", spo2: p.spo2 || "", o2: p.o2 || "",
+      hb: p.hb || "", wcc: p.wcc || "", crp: p.crp || "", na: p.na || "", k: p.k || "", cr: p.cr || "",
+      drains: (p.drains || []).map(function (d) {
+        return { id: d.id, name: d.name || "", airLeak: d.airLeak || "", output: d.output || "" };
+      })
+    };
+  }
+
+  function svgChart(pts, dec) {
+    // pts: [{d: iso, v: number}] sorted ascending by date
+    var W = 320, H = 116, padL = 40, padR = 10, padT = 10, padB = 22;
+    var vs = pts.map(function (p) { return p.v; });
+    var min = Math.min.apply(null, vs), max = Math.max.apply(null, vs);
+    if (min === max) { min -= 1; max += 1; }
+    var innerW = W - padL - padR, innerH = H - padT - padB;
+    function x(i) { return padL + (pts.length === 1 ? innerW / 2 : (i / (pts.length - 1)) * innerW); }
+    function y(v) { return padT + (1 - (v - min) / (max - min)) * innerH; }
+    function fv(v) { return dec ? v.toFixed(dec) : String(Math.round(v)); }
+    var line = pts.map(function (p, i) { return x(i).toFixed(1) + "," + y(p.v).toFixed(1); }).join(" ");
+    var dots = pts.map(function (p, i) {
+      return '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(p.v).toFixed(1) + '" r="3.2" fill="currentColor"/>';
+    }).join("");
+    var xlabels =
+      '<text x="' + padL + '" y="' + (H - 6) + '" font-size="9" fill="#66757F">' + fmtDate(pts[0].d) + "</text>" +
+      (pts.length > 1
+        ? '<text x="' + (W - padR) + '" y="' + (H - 6) + '" font-size="9" fill="#66757F" text-anchor="end">' + fmtDate(pts[pts.length - 1].d) + "</text>"
+        : "");
+    var ylabels =
+      '<text x="' + (padL - 6) + '" y="' + (padT + 4) + '" font-size="9" fill="#66757F" text-anchor="end">' + fv(max) + "</text>" +
+      '<text x="' + (padL - 6) + '" y="' + (padT + innerH + 4) + '" font-size="9" fill="#66757F" text-anchor="end">' + fv(min) + "</text>";
+    var grid =
+      '<line x1="' + padL + '" y1="' + padT + '" x2="' + padL + '" y2="' + (padT + innerH) + '" stroke="#E1E6E4"/>' +
+      '<line x1="' + padL + '" y1="' + (padT + innerH) + '" x2="' + (W - padR) + '" y2="' + (padT + innerH) + '" stroke="#E1E6E4"/>';
+    return '<svg viewBox="0 0 ' + W + " " + H + '" xmlns="http://www.w3.org/2000/svg">' +
+      grid +
+      '<polyline points="' + line + '" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>' +
+      dots + xlabels + ylabels +
+    "</svg>";
+  }
+
+  function seriesFor(hist, dates, getter) {
+    var pts = [];
+    dates.forEach(function (d) {
+      var v = getter(hist[d]);
+      var n = parseFloat(v);
+      if (v !== "" && v != null && !isNaN(n)) pts.push({ d: d, v: n });
+    });
+    return pts;
+  }
+
+  function openTrends(p) {
+    document.getElementById("trendTitle").textContent =
+      "Trends \u00B7 " + (p.initials || "?") + (p.bed ? " (bed " + p.bed + ")" : "");
+    var content = document.getElementById("trendContent");
+    var hist = p.history || {};
+    var dates = Object.keys(hist).sort();
+    if (dates.length < 2) {
+      content.innerHTML = '<div class="trend-empty"><strong>Not enough data yet.</strong><br>' +
+        "A snapshot of obs, bloods and drain readings is saved automatically each day you press Save on this patient. " +
+        "Come back once there are two or more days of data and the graphs will appear here.</div>";
+      trendSheet.classList.add("open");
+      trendSheet.scrollTop = 0;
+      return;
+    }
+
+    var html = "";
+
+    // drain charts first: air leak then output per drain
+    var drainMap = {}; // id -> latest name
+    dates.forEach(function (d) {
+      (hist[d].drains || []).forEach(function (dr) {
+        if (dr.id) drainMap[dr.id] = dr.name || drainMap[dr.id] || "";
+      });
+    });
+    Object.keys(drainMap).forEach(function (did, di) {
+      var label = drainMap[did] || "Drain " + (di + 1);
+      var leakPts = seriesFor(hist, dates, function (h) {
+        var m = (h.drains || []).find(function (x) { return x.id === did; });
+        return m ? m.airLeak : "";
+      });
+      var outPts = seriesFor(hist, dates, function (h) {
+        var m = (h.drains || []).find(function (x) { return x.id === did; });
+        return m ? m.output : "";
+      });
+      if (leakPts.length >= 2) html += '<div class="trend-card"><h4>' + esc(label) + " \u00B7 Air leak (ml/min)</h4>" + svgChart(leakPts, 0) + "</div>";
+      if (outPts.length >= 2) html += '<div class="trend-card"><h4>' + esc(label) + " \u00B7 Output (ml/24h)</h4>" + svgChart(outPts, 0) + "</div>";
+    });
+
+    // bloods and obs
+    var metrics = [
+      ["crp", "CRP", 0], ["wcc", "WCC", 1], ["hb", "Hb", 0], ["cr", "Creatinine", 0],
+      ["na", "Na", 0], ["k", "K", 1],
+      ["temp", "Temp \u00B0C", 1], ["hr", "Heart rate", 0], ["spo2", "SpO2 %", 0]
+    ];
+    metrics.forEach(function (m) {
+      var pts = seriesFor(hist, dates, function (h) { return h[m[0]]; });
+      if (pts.length >= 2) html += '<div class="trend-card"><h4>' + m[1] + "</h4>" + svgChart(pts, m[2]) + "</div>";
+    });
+    // BP systolic from the stored string
+    var sysPts = seriesFor(hist, dates, function (h) { return (h.bp || "").split("/")[0]; });
+    if (sysPts.length >= 2) html += '<div class="trend-card"><h4>BP systolic</h4>' + svgChart(sysPts, 0) + "</div>";
+
+    if (!html) {
+      html = '<div class="trend-empty">Two or more days of data exist, but no single value has been recorded on at least two days yet.</div>';
+    }
+
+    // history table, newest first
+    var cols = [["temp","T\u00B0"],["hr","HR"],["bp","BP"],["rr","RR"],["spo2","SpO2"],["o2","O2"],
+      ["hb","Hb"],["wcc","WCC"],["crp","CRP"],["na","Na"],["k","K"],["cr","Cr"]];
+    var thead = "<tr><th>Date</th>" + cols.map(function (c) { return "<th>" + c[1] + "</th>"; }).join("") + "</tr>";
+    var rows = dates.slice().reverse().map(function (d) {
+      return "<tr><td>" + fmtDate(d) + "</td>" + cols.map(function (c) {
+        var v = hist[d][c[0]];
+        return "<td>" + (v ? esc(v) : "\u2013") + "</td>";
+      }).join("") + "</tr>";
+    }).join("");
+    html += '<div class="trend-card"><h4>Previous days</h4><div class="tbl-scroll"><table class="hist">' + thead + rows + "</table></div></div>";
+
+    content.innerHTML = html;
+    trendSheet.classList.add("open");
+    trendSheet.scrollTop = 0;
+  }
+
+  // ---------- drain form rows ----------
+  var drainFormsEl = document.getElementById("drainForms");
+  function renderDrainForms() {
+    drainFormsEl.innerHTML = draftDrains.map(function (d, i) {
+      return '<div class="drain-block">' +
+        '<div class="d-head">' +
+          '<input data-dname="' + i + '" value="' + esc(d.name || "") + '" placeholder="Drain name (e.g. Right pleural)">' +
+          '<button type="button" data-deldrain="' + i + '">Remove</button>' +
+        "</div>" +
+        sliderRow("airLeak", d.airLeak, 'data-df="airLeak" data-di="' + i + '"') +
+        sliderRow("output", d.output, 'data-df="output" data-di="' + i + '"') +
+        '<div class="frow">' +
+          '<div class="field"><label>Suction</label><input data-df="suction" data-di="' + i + '" value="' + esc(d.suction) + '" placeholder="2 kPa / off"></div>' +
+          '<div class="field"><label>Fluid type</label><select data-df="fluid" data-di="' + i + '">' +
+            ["","Serous","Haemoserous","Serosanguinous","Frank blood","Chylous","Purulent","Air only"].map(function (o) {
+              return '<option value="' + o + '"' + (d.fluid === o ? " selected" : "") + ">" + (o || "\u2013") + "</option>";
+            }).join("") + "</select></div>" +
+        "</div>" +
+        '<div class="toggle-row"><label>Clamped</label><input type="checkbox" data-df="clamped" data-di="' + i + '"' + (d.clamped ? " checked" : "") + "></div>" +
+      "</div>";
+    }).join("");
+  }
+  drainFormsEl.addEventListener("input", function (e) {
+    var nm = e.target.getAttribute("data-dname");
+    if (nm != null) { draftDrains[+nm].name = e.target.value; return; }
+    if (e.target.classList.contains("s-range")) return;
+    var f = e.target.getAttribute("data-df");
+    if (!f) return;
+    var i = +e.target.getAttribute("data-di");
+    draftDrains[i][f] = f === "clamped" ? e.target.checked : e.target.value;
+  });
+  drainFormsEl.addEventListener("click", function (e) {
+    var del = e.target.getAttribute("data-deldrain");
+    if (del != null) { draftDrains.splice(+del, 1); renderDrainForms(); }
+  });
+  document.getElementById("addDrainBtn").addEventListener("click", function () {
+    draftDrains.push({ id: uid(), name: "", airLeak: "", suction: "", output: "", fluid: "", clamped: false });
+    renderDrainForms();
+  });
+
+  // ---------- medication list rows ----------
+  var medFormsEl = document.getElementById("medForms");
+  function renderMedForms() {
+    medFormsEl.innerHTML = draftMeds.map(function (m, i) {
+      return '<div class="med-edit-row">' +
+        '<input data-mf="' + i + '" value="' + esc(m) + '" placeholder="Drug, dose, frequency">' +
+        '<button type="button" data-delmed="' + i + '">\u2715</button>' +
+      "</div>";
+    }).join("");
+  }
+  medFormsEl.addEventListener("input", function (e) {
+    var i = e.target.getAttribute("data-mf");
+    if (i == null) return;
+    draftMeds[+i] = e.target.value;
+  });
+  medFormsEl.addEventListener("click", function (e) {
+    var del = e.target.getAttribute("data-delmed");
+    if (del != null) { draftMeds.splice(+del, 1); renderMedForms(); }
+  });
+  document.getElementById("addMedBtn").addEventListener("click", function () {
+    draftMeds.push("");
+    renderMedForms();
+    var inputs = medFormsEl.querySelectorAll("input");
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  });
+
+  // ---------- patient sheet ----------
+  var sheet = document.getElementById("sheet");
+  var textFields = ["initials","bed","consSel","consOther","dm","allergies","appr","apprOther","side","opSel","opOther","dos",
+    "o2","abx","acoagSel","acoagReason","cxr","cxrNote","bldDate"];
+  var sliderFields = ["age","temp","hr","rr","spo2","hb","wcc","crp","na","k","cr"];
+  function fEl(name) { return document.getElementById("f_" + name); }
+
+  function syncOther() {
+    document.getElementById("consOtherWrap").classList.toggle("hidden", fEl("consSel").value !== "__other");
+    document.getElementById("apprOtherWrap").classList.toggle("hidden", fEl("appr").value !== "__other");
+    document.getElementById("opOtherWrap").classList.toggle("hidden", fEl("opSel").value !== "__other");
+    document.getElementById("acoagReasonWrap").classList.toggle("hidden", fEl("acoagSel").value !== "None");
+  }
+  fEl("consSel").addEventListener("change", syncOther);
+  fEl("appr").addEventListener("change", syncOther);
+  fEl("opSel").addEventListener("change", syncOther);
+  fEl("acoagSel").addEventListener("change", syncOther);
+
+  var sexM = document.getElementById("f_sexM");
+  var sexF = document.getElementById("f_sexF");
+  sexM.addEventListener("change", function () { if (sexM.checked) sexF.checked = false; });
+  sexF.addEventListener("change", function () { if (sexF.checked) sexM.checked = false; });
+
+  function fillWardSelect(selected) {
+    fEl("ward").innerHTML = data.wards.map(function (w) {
+      return '<option value="' + w.id + '"' + (w.id === selected ? " selected" : "") + ">" + esc(w.name) + "</option>";
+    }).join("");
+  }
+
+  function openSheet(p) {
+    editingId = p ? p.id : null;
+    document.getElementById("sheetTitle").textContent = p ? "Edit patient" : "New patient";
+    document.getElementById("deleteBtn").style.display = p ? "block" : "none";
+    textFields.forEach(function (f) { fEl(f).value = p ? (p[f] || "") : ""; });
+    sexM.checked = !!(p && p.sex === "M");
+    sexF.checked = !!(p && p.sex === "F");
+    sliderVals = {};
+    sliderFields.forEach(function (f) {
+      var v = p ? (p[f] || "") : "";
+      sliderVals[f] = (v !== "" && !isNaN(parseFloat(v))) ? String(v) : "";
+    });
+    var bp = p ? (p.bp || "") : "";
+    var bpParts = bp.split("/");
+    sliderVals.sys = bpParts[0] && !isNaN(parseFloat(bpParts[0])) ? bpParts[0] : "";
+    sliderVals.dia = bpParts[1] && !isNaN(parseFloat(bpParts[1])) ? bpParts[1] : "";
+    fillWardSelect(p ? p.ward : data.currentWard);
+    draftDrains = p ? JSON.parse(JSON.stringify(p.drains || [])) : [];
+    draftDrains.forEach(function (d) { if (!d.id) d.id = uid(); });
+    draftMeds = p ? (p.meds || []).slice() : [];
+    renderPatientSliders();
+    renderDrainForms();
+    renderMedForms();
+    syncOther();
+    sheet.classList.add("open");
+    sheet.scrollTop = 0;
+  }
+  function closeSheet() { sheet.classList.remove("open"); }
+
+  document.getElementById("addBtn").addEventListener("click", function () { openSheet(null); });
+  document.getElementById("cancelBtn").addEventListener("click", closeSheet);
+
+  document.getElementById("saveBtn").addEventListener("click", function () {
+    var d = {};
+    textFields.forEach(function (f) { d[f] = fEl(f).value.trim(); });
+    d.sex = sexM.checked ? "M" : (sexF.checked ? "F" : "");
+    sliderFields.forEach(function (f) { d[f] = sliderVals[f] || ""; });
+    d.bp = sliderVals.sys ? (sliderVals.sys + (sliderVals.dia ? "/" + sliderVals.dia : "")) : "";
+    if (!d.initials && !d.bed) { alert("Enter at least initials or a bed number."); return; }
+    d.ward = fEl("ward").value;
+    d.drains = draftDrains;
+    d.meds = draftMeds.map(function (m) { return m.trim(); }).filter(Boolean);
+    var target;
+    if (editingId) {
+      target = data.patients.find(function (x) { return x.id === editingId; });
+      if (target) { d.jobs = target.jobs || []; d.id = target.id; Object.assign(target, d); }
+    } else {
+      d.id = uid();
+      d.jobs = [];
+      data.patients.push(d);
+      expanded[d.id] = 1;
+      target = d;
+    }
+    if (target) snapshot(target);
+    persist(); render(); closeSheet();
+  });
+
+  document.getElementById("deleteBtn").addEventListener("click", function () {
+    if (!editingId) return;
+    if (!confirm("Remove this patient from the list? Their trend history is deleted with them.")) return;
+    data.patients = data.patients.filter(function (x) { return x.id !== editingId; });
+    persist(); render(); closeSheet();
+  });
+
+  // ---------- list interactions (delegated on the carousel) ----------
+  carouselEl.addEventListener("click", function (e) {
+    var actEl = e.target.closest("[data-act]");
+    if (!actEl) return;
+    var act = actEl.getAttribute("data-act");
+    var pid = actEl.getAttribute("data-p");
+    var p = data.patients.find(function (x) { return x.id === pid; });
+    if (!p) return;
+
+    if (act === "toggle") {
+      expanded[pid] = (expanded[pid] || 0) === 0 ? 1 : 0;
+      render();
+      return;
+    }
+    if (act === "more") {
+      expanded[pid] = expanded[pid] === 2 ? 1 : 2;
+      render();
+      return;
+    }
+    if (act === "notestoggle") {
+      notesOpen[pid] = !notesOpen[pid];
+      render();
+      return;
+    }
+    if (act === "trends") { openTrends(p); return; }
+    if (act === "edit") { openSheet(p); return; }
+    if (act === "addjob") {
+      var input = carouselEl.querySelector('[data-jobinput="' + pid + '"]');
+      var text = input.value.trim();
+      if (!text) return;
+      p.jobs = p.jobs || [];
+      p.jobs.push({ id: uid(), text: text, done: false });
+      persist(); render();
+      return;
+    }
+    if (act === "togglejob" || act === "deljob") {
+      var jid = actEl.getAttribute("data-j");
+      p.jobs = p.jobs || [];
+      if (act === "deljob") p.jobs = p.jobs.filter(function (j) { return j.id !== jid; });
+      else {
+        var j = p.jobs.find(function (x) { return x.id === jid; });
+        if (j) j.done = !j.done;
+      }
+      persist(); render();
+    }
+  });
+
+  carouselEl.addEventListener("input", function (e) {
+    var pid = e.target.getAttribute("data-notes");
+    if (!pid) return;
+    var p = data.patients.find(function (x) { return x.id === pid; });
+    if (!p) return;
+    p.notes = e.target.value;
+    clearTimeout(notesTimer);
+    notesTimer = setTimeout(persist, 400);
+  });
+
+  carouselEl.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter") return;
+    var pid = e.target.getAttribute("data-jobinput");
+    if (!pid) return;
+    var p = data.patients.find(function (x) { return x.id === pid; });
+    var text = e.target.value.trim();
+    if (!p || !text) return;
+    p.jobs = p.jobs || [];
+    p.jobs.push({ id: uid(), text: text, done: false });
+    persist(); render();
+  });
+
+  applyTheme();
+  renderPager();
+  render();
+  persist();
+  setInterval(render, 60 * 60 * 1000);
+})();
+</script>
+</body>
+</html>
