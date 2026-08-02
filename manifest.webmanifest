@@ -1,0 +1,11 @@
+{
+  "name": "Thoracic Ward List",
+  "short_name": "Ward List",
+  "display": "standalone",
+  "start_url": ".",
+  "background_color": "#131E33",
+  "theme_color": "#131E33",
+  "icons": [
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
