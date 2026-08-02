@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="navy">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ward List">
+<meta name="theme-color" content="#131E33">
+<link rel="apple-touch-icon" href="icon.png">
+<title>Thoracic Ward List</title>
+<style>
+  html[data-theme="navy"] {
+    --ink: #131E33; --ink-soft: #9AA8C4;
+    --accent: #2E5C9E; --accent-dark: #234878; --accent-tint: #E7EDF6;
+    --paper: #F1F3F6;
+  }
+  html[data-theme="maroon"] {
+    --ink: #3E1219; --ink-soft: #C4A0A6;
+    --accent: #8A2333; --accent-dark: #6E1B28; --accent-tint: #F5E8EA;
+    --paper: #F5F1F0;
+  }
+  html[data-theme="emerald"] {
+    --ink: #0E251C; --ink-soft: #93B3A5;
+    --accent: #167A50; --accent-dark: #10603E; --accent-tint: #E6F2EC;
+    --paper: #F0F4F1;
+  }
+  :root {
+    --card: #FFFFFF;
+    --alert: #C4452B;
+    --alert-tint: #F9ECE8;
+    --amber: #B07D2B;
+    --muted: #66757F;
+    --line: #E1E6E4;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { font-size: 16px; }
+  body {
+    font-family: var(--sans);
+    background: var(--paper);
+    color: var(--ink);
+    padding-bottom: calc(150px + env(safe-area-inset-bottom));
+  }
+  header {
+    background: var(--ink);
+    color: #fff;
+    padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .h-left { min-width: 0; }
+  .h-left .w-name { font-size: 1.02rem; font-weight: 700; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .h-left .count { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-soft); }
+  .theme-dots { display: flex; gap: 10px; flex-shrink: 0; }
+  .theme-dot {
+    width: 24px; height: 24px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.4); padding: 0;
+  }
+  .theme-dot.sel { border-color: #fff; box-shadow: 0 0 0 2px var(--ink), 0 0 0 3px rgba(255,255,255,0.5); }
+
+  .list { padding: 10px 10px 0; display: flex; flex-direction: column; gap: 8px; }
+  .empty { text-align: center; color: var(--muted); padding: 70px 30px; line-height: 1.5; }
+  .empty strong { color: var(--ink); display: block; margin-bottom: 6px; font-size: 1.05rem; }
+
+  .card {
+    background: var(--card); border-radius: 12px; border: 1px solid var(--line);
+    overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  }
+  .head { display: flex; align-items: center; gap: 8px; padding: 0 10px 0 0; cursor: pointer; min-height: 54px; }
+  .bed {
+    background: var(--ink); color: #fff; min-width: 52px; align-self: stretch;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px;
+  }
+  .bed .label { font-size: 0.5rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-soft); }
+  .bed .num { font-family: var(--mono); font-size: 1.15rem; font-weight: 700; }
+  .head-mid { flex: 1; min-width: 0; padding: 7px 0; }
+  .head-mid .pt-line { font-size: 0.88rem; font-weight: 700; letter-spacing: 0.02em; }
+  .head-mid .pt-line .age { font-family: var(--mono); font-weight: 600; color: var(--muted); font-size: 0.8rem; }
+  .head-mid .op { font-size: 0.8rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cons-badge {
+    font-family: var(--mono); font-weight: 700; font-size: 0.75rem;
+    background: var(--accent-tint); color: var(--accent-dark);
+    padding: 3px 6px; border-radius: 6px; white-space: nowrap;
+  }
+  .pod {
+    font-family: var(--mono); font-weight: 700; font-size: 0.78rem;
+    background: var(--accent); color: #fff; padding: 3px 7px; border-radius: 6px; white-space: nowrap;
+  }
+  .chev-card { color: var(--muted); font-size: 0.7rem; transition: transform 0.15s; }
+  .card.open .chev-card { transform: rotate(180deg); }
+  .body { display: none; border-top: 1px solid var(--line); }
+  .card.open .body { display: block; }
+
+  .section { padding: 9px 12px; border-bottom: 1px solid var(--line); }
+  .section:last-child { border-bottom: none; }
+  .sec-label {
+    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--muted); font-weight: 700; margin-bottom: 6px;
+  }
+  .id-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 6px;
+    background: var(--accent-tint); color: var(--accent-dark); white-space: nowrap;
+  }
+  .chip.warn { background: #F8ECE3; color: var(--amber); }
+  .chip.danger { background: var(--alert); color: #fff; font-weight: 700; }
+  .edit-btn {
+    margin-left: auto; background: var(--accent-tint); border: none;
+    color: var(--accent-dark); font-size: 0.82rem; font-weight: 700;
+    padding: 6px 14px; border-radius: 8px;
+  }
+
+  .tiles { display: grid; gap: 6px; grid-template-columns: repeat(6, 1fr); }
+  .tile { text-align: center; background: #F6F8F7; border-radius: 8px; padding: 5px 2px; min-width: 0; }
+  .tile .t-label { font-size: 0.56rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 700; }
+  .tile .t-val { font-family: var(--mono); font-size: 0.82rem; font-weight: 600; margin-top: 1px; white-space: nowrap; }
+  .tile .t-val.blank { color: #C2CBC8; }
+
+  .drain { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; padding: 3px 0; }
+  .drain + .drain { border-top: 1px dashed var(--line); margin-top: 4px; padding-top: 7px; }
+  .drain .d-name { font-weight: 700; font-size: 0.82rem; }
+  .drain .d-item { font-size: 0.82rem; }
+  .drain .d-item span { color: var(--muted); }
+  .drain .d-item b { font-family: var(--mono); font-weight: 600; }
+  .drain .d-item b.leak { color: var(--alert); }
+  .flag-clamped {
+    font-size: 0.7rem; font-weight: 700; color: #fff; background: var(--alert);
+    padding: 2px 8px; border-radius: 6px; letter-spacing: 0.04em;
+  }
+  .no-drains, .none-txt { font-size: 0.82rem; color: var(--muted); }
+
+  .med-row { font-size: 0.86rem; padding: 2px 0; }
+  .med-row span.m-label { color: var(--muted); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-right: 6px; }
+  .med-row.allergy-line span.m-label { color: var(--alert); }
+  .med-row.allergy-line b { color: var(--alert); }
+  .med-item { font-size: 0.86rem; padding: 1px 0 1px 4px; }
+  .med-item::before { content: "\2022  "; color: var(--muted); }
+
+  .meta-row { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 7px; }
+  .meta-item { font-size: 0.78rem; color: var(--muted); }
+  .meta-item b { font-family: var(--mono); color: var(--ink); font-weight: 600; }
+  .stale { color: var(--amber); font-weight: 700; }
+
+  .jobs .job { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+  .jobs .job input[type=checkbox] { width: 21px; height: 21px; accent-color: var(--accent); flex-shrink: 0; }
+  .jobs .job .j-text { font-size: 0.9rem; flex: 1; }
+  .jobs .job.done .j-text { color: var(--muted); text-decoration: line-through; }
+  .jobs .j-del { background: none; border: none; color: #C2CBC8; font-size: 1rem; padding: 2px 6px; }
+  .job-add { display: flex; gap: 8px; margin-top: 6px; }
+  .job-add input {
+    flex: 1; border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 10px; font-size: 0.9rem; font-family: var(--sans); background: #FAFBFA;
+  }
+  .job-add button {
+    background: var(--accent); color: #fff; border: none; border-radius: 8px;
+    padding: 0 14px; font-size: 0.85rem; font-weight: 700;
+  }
+
+  .fab {
+    position: fixed; right: 16px; bottom: calc(84px + env(safe-area-inset-bottom));
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--accent); color: #fff; border: none;
+    font-size: 1.85rem; line-height: 1;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3); z-index: 60;
+  }
+
+  /* bottom ward pager */
+  .bottombar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 55;
+    background: var(--ink); color: #fff;
+    display: flex; align-items: center; gap: 4px;
+    padding: 8px 8px calc(10px + env(safe-area-inset-bottom));
+  }
+  .pager-wrap { flex: 1; min-width: 0; }
+  .pager {
+    display: flex; overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .pager::-webkit-scrollbar { display: none; }
+  .slide {
+    flex: 0 0 100%; scroll-snap-align: center;
+    text-align: center; font-weight: 700; font-size: 0.9rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    padding: 2px 6px;
+  }
+  .dots { display: flex; justify-content: center; gap: 7px; margin-top: 6px; }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: rgba(255,255,255,0.35); border: none; padding: 0;
+  }
+  .dot.on { background: #fff; }
+  .manage-btn {
+    background: none; border: none; color: var(--ink-soft);
+    font-size: 0.75rem; font-weight: 700; padding: 8px 8px;
+    font-family: var(--sans); flex-shrink: 0; letter-spacing: 0.04em;
+  }
+
+  .sheet {
+    position: fixed; inset: 0; background: var(--paper); z-index: 100;
+    overflow-y: auto; -webkit-overflow-scrolling: touch; display: none;
+  }
+  .sheet.open { display: block; }
+  .sheet-bar {
+    position: sticky; top: 0; background: var(--ink); color: #fff; z-index: 10;
+    padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .sheet-bar h2 { font-size: 1rem; }
+  .sheet-bar button { background: none; border: none; color: var(--ink-soft); font-size: 0.95rem; padding: 4px 8px; }
+  .sheet-bar button.save { color: #fff; font-weight: 700; background: var(--accent); border-radius: 8px; padding: 7px 16px; }
+  .form { padding: 14px 14px calc(50px + env(safe-area-inset-bottom)); }
+  .fgroup { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+  .fgroup h3 { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 10px; }
+  .frow { display: flex; gap: 10px; }
+  .frow > * { flex: 1; min-width: 0; }
+  .field { margin-bottom: 10px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label { display: block; font-size: 0.72rem; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+  .field input, .field select {
+    width: 100%; border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px; font-size: 0.95rem; font-family: var(--sans);
+    background: #FAFBFA; color: var(--ink); appearance: none;
+  }
+  .field input[type=date] { min-height: 42px; }
+  .field .mono { font-family: var(--mono); }
+  .hidden { display: none; }
+  .drain-block { border: 1px dashed var(--line); border-radius: 10px; padding: 10px; margin-bottom: 10px; }
+  .drain-block .d-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .drain-block .d-head b { font-size: 0.82rem; }
+  .drain-block .d-head button { background: none; border: none; color: var(--alert); font-size: 0.8rem; font-weight: 600; }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding-top: 2px; }
+  .toggle-row label { font-size: 0.85rem; font-weight: 600; }
+  .toggle-row input { width: 22px; height: 22px; accent-color: var(--alert); }
+  .add-drain, .danger { width: 100%; border-radius: 10px; padding: 12px; font-size: 0.9rem; font-weight: 700; border: none; }
+  .add-drain { background: var(--accent-tint); color: var(--accent-dark); }
+  .danger { background: var(--alert-tint); color: var(--alert); margin-top: 4px; }
+  .med-edit-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .med-edit-row input {
+    flex: 1; border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px; font-size: 0.95rem; font-family: var(--sans); background: #FAFBFA;
+  }
+  .med-edit-row button { background: none; border: none; color: var(--alert); font-size: 1rem; padding: 0 8px; }
+
+  .ward-row {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px; margin-bottom: 8px;
+  }
+  .ward-row.current { border-color: var(--accent); background: var(--accent-tint); }
+  .ward-row .w-main { flex: 1; min-width: 0; font-weight: 700; font-size: 0.95rem; }
+  .ward-row .w-count { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
+  .ward-row button { background: none; border: none; font-size: 0.95rem; padding: 6px 8px; color: var(--muted); }
+  .ward-row button.w-del { color: var(--alert); }
+  .ward-add { display: flex; gap: 8px; margin: 4px 0 18px; }
+  .ward-add input {
+    flex: 1; border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px; font-size: 0.95rem; font-family: var(--sans); background: var(--card);
+  }
+  .ward-add button { background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 0 18px; font-weight: 700; }
+  .panel-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 700; margin: 14px 0 8px; }
+  .storage-warn { background: #F8ECE3; color: var(--amber); font-size: 0.78rem; padding: 8px 14px; text-align: center; display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="h-left">
+    <div class="w-name" id="wardName">Ward</div>
+    <div class="count" id="count"></div>
+  </div>
+  <div class="theme-dots">
+    <button class="theme-dot" data-theme="maroon" style="background:#8A2333" aria-label="Deep maroon"></button>
+    <button class="theme-dot" data-theme="navy" style="background:#2E5C9E" aria-label="Dark navy"></button>
+    <button class="theme-dot" data-theme="emerald" style="background:#167A50" aria-label="Emerald"></button>
+  </div>
+</header>
+<div class="storage-warn" id="storageWarn">Saving unavailable in this browser session. Data will be lost when the page closes.</div>
+
+<div class="list" id="list"></div>
+
+<button class="fab" id="addBtn" aria-label="Add patient">+</button>
+
+<div class="bottombar">
+  <div class="pager-wrap">
+    <div class="pager" id="pager"></div>
+    <div class="dots" id="dots"></div>
+  </div>
+  <button class="manage-btn" id="manageBtn">WARDS</button>
+</div>
+
+<!-- ward management panel -->
+<div class="sheet" id="wardSheet">
+  <div class="sheet-bar">
+    <button id="wardClose">Close</button>
+    <h2>Manage wards</h2>
+    <span style="width:48px"></span>
+  </div>
+  <div class="form">
+    <div class="panel-label">Your wards</div>
+    <div id="wardRows"></div>
+    <div class="ward-add">
+      <input id="newWardName" placeholder="New ward name...">
+      <button id="addWardBtn">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- patient edit sheet -->
+<div class="sheet" id="sheet">
+  <div class="sheet-bar">
+    <button id="cancelBtn">Cancel</button>
+    <h2 id="sheetTitle">New patient</h2>
+    <button class="save" id="saveBtn">Save</button>
+  </div>
+  <div class="form">
+
+    <div class="fgroup">
+      <h3>Patient</h3>
+      <div class="frow">
+        <div class="field"><label>Initials</label><input id="f_initials" autocapitalize="characters" placeholder="AB"></div>
+        <div class="field"><label>Bed</label><input id="f_bed" class="mono" placeholder="12"></div>
+        <div class="field"><label>Age</label><input id="f_age" class="mono" inputmode="numeric" placeholder="67"></div>
+      </div>
+      <div class="field"><label>Consultant</label>
+        <select id="f_consSel">
+          <option value=""></option>
+          <option>Mr Kadlec</option>
+          <option>Mr Bartosik</option>
+          <option>Mr Szafron</option>
+          <option>Mr Kouritas</option>
+          <option>Ms Viola</option>
+          <option value="__other">Other...</option>
+        </select>
+      </div>
+      <div class="field hidden" id="consOtherWrap"><label>Consultant name</label><input id="f_consOther"></div>
+      <div class="field"><label>Diabetic status</label>
+        <select id="f_dm">
+          <option value="">Not diabetic</option>
+          <option>Diet controlled</option>
+          <option>Oral medication</option>
+          <option>Insulin</option>
+        </select>
+      </div>
+      <div class="field"><label>Allergies</label><input id="f_allergies" placeholder="NKDA"></div>
+      <div class="field"><label>Ward</label><select id="f_ward"></select></div>
+    </div>
+
+    <div class="fgroup">
+      <h3>Operation</h3>
+      <div class="frow">
+        <div class="field"><label>Approach</label>
+          <select id="f_appr">
+            <option value=""></option>
+            <option>VATS</option>
+            <option>RATS</option>
+            <option>Thoracotomy</option>
+            <option value="__other">Other...</option>
+          </select>
+        </div>
+        <div class="field"><label>Side</label>
+          <select id="f_side">
+            <option value=""></option>
+            <option>Right</option>
+            <option>Left</option>
+          </select>
+        </div>
+      </div>
+      <div class="field hidden" id="apprOtherWrap"><label>Approach (other)</label><input id="f_apprOther"></div>
+      <div class="field"><label>Procedure</label><input id="f_opDetail" placeholder="Upper lobectomy"></div>
+      <div class="field"><label>Date of surgery</label><input type="date" id="f_dos"></div>
+    </div>
+
+    <div class="fgroup">
+      <h3>Drains (Topaz)</h3>
+      <div id="drainForms"></div>
+      <button class="add-drain" id="addDrainBtn" type="button">+ Add drain</button>
+    </div>
+
+    <div class="fgroup">
+      <h3>This morning's observations</h3>
+      <div class="frow">
+        <div class="field"><label>Temp</label><input id="f_temp" class="mono" inputmode="decimal" placeholder="36.8"></div>
+        <div class="field"><label>HR</label><input id="f_hr" class="mono" inputmode="numeric"></div>
+        <div class="field"><label>BP</label><input id="f_bp" class="mono" placeholder="120/70"></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label>RR</label><input id="f_rr" class="mono" inputmode="numeric"></div>
+        <div class="field"><label>SpO2 %</label><input id="f_spo2" class="mono" inputmode="numeric"></div>
+        <div class="field"><label>O2 support</label><input id="f_o2" placeholder="RA / 2L NC"></div>
+      </div>
+    </div>
+
+    <div class="fgroup">
+      <h3>Latest bloods</h3>
+      <div class="field"><label>Date taken</label><input type="date" id="f_bldDate"></div>
+      <div class="frow">
+        <div class="field"><label>Hb</label><input id="f_hb" class="mono" inputmode="decimal"></div>
+        <div class="field"><label>WCC</label><input id="f_wcc" class="mono" inputmode="decimal"></div>
+        <div class="field"><label>CRP</label><input id="f_crp" class="mono" inputmode="decimal"></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label>Na</label><input id="f_na" class="mono" inputmode="decimal"></div>
+        <div class="field"><label>K</label><input id="f_k" class="mono" inputmode="decimal"></div>
+        <div class="field"><label>Creat</label><input id="f_cr" class="mono" inputmode="decimal"></div>
+      </div>
+      <div class="field"><label>Latest CXR date</label><input type="date" id="f_cxr"></div>
+    </div>
+
+    <div class="fgroup">
+      <h3>Medications</h3>
+      <div class="field"><label>Antibiotics</label><input id="f_abx" placeholder="None"></div>
+      <div class="field"><label>Anticoagulation</label><input id="f_acoag" placeholder="Prophylactic dalteparin"></div>
+      <div class="field"><label>Full medication list</label></div>
+      <div id="medForms"></div>
+      <button class="add-drain" id="addMedBtn" type="button">+ Add medication</button>
+    </div>
+
+    <button class="danger" id="deleteBtn" type="button" style="display:none">Discharge / remove patient</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- storage ----------
+  var KEY = "thoracic_ward_list_v1";
+  var memStore = null;
+  var canStore = (function () {
+    try { localStorage.setItem("__t", "1"); localStorage.removeItem("__t"); return true; }
+    catch (e) { return false; }
+  })();
+  if (!canStore) document.getElementById("storageWarn").style.display = "block";
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  function load() {
+    var raw = null;
+    try { raw = canStore ? localStorage.getItem(KEY) : memStore; } catch (e) {}
+    var parsed = null;
+    try { parsed = raw ? JSON.parse(raw) : null; } catch (e) {}
+    if (Array.isArray(parsed)) {
+      var wid = uid();
+      parsed.forEach(function (p) {
+        p.ward = wid;
+        p.consSel = ""; p.consOther = p.cons || "";
+        if (p.cons) p.consSel = "__other";
+        p.appr = ""; p.apprOther = ""; p.side = ""; p.opDetail = p.op || "";
+        (p.drains || []).forEach(function (d) {
+          if (typeof d.airLeak === "string" && isNaN(parseFloat(d.airLeak))) d.airLeak = "";
+        });
+      });
+      return { theme: "navy", wards: [{ id: wid, name: "Ward 1" }], currentWard: wid, patients: parsed };
+    }
+    if (parsed && parsed.wards) return parsed;
+    var w = uid();
+    return { theme: "navy", wards: [{ id: w, name: "Ward 1" }], currentWard: w, patients: [] };
+  }
+
+  var data = load();
+  var editingId = null;
+  var draftDrains = [];
+  var draftMeds = [];
+  var expanded = {};
+
+  function persist() {
+    var raw = JSON.stringify(data);
+    if (canStore) { try { localStorage.setItem(KEY, raw); } catch (e) {} }
+    else memStore = raw;
+  }
+
+  // ---------- helpers ----------
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function daysSince(iso) {
+    if (!iso) return null;
+    var d = new Date(iso + "T00:00:00");
+    if (isNaN(d)) return null;
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return Math.round((today - d) / 86400000);
+  }
+  function fmtDate(iso) {
+    if (!iso) return "";
+    var d = new Date(iso + "T00:00:00");
+    if (isNaN(d)) return "";
+    var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return d.getDate() + " " + months[d.getMonth()];
+  }
+  function ago(iso) {
+    var n = daysSince(iso);
+    if (n === null) return "";
+    if (n === 0) return "today";
+    if (n === 1) return "1d ago";
+    return n + "d ago";
+  }
+  function bedSort(a, b) {
+    var na = parseFloat(a.bed), nb = parseFloat(b.bed);
+    if (!isNaN(na) && !isNaN(nb) && na !== nb) return na - nb;
+    return String(a.bed).localeCompare(String(b.bed), undefined, { numeric: true });
+  }
+  var CONS_INITIALS = {
+    "Mr Kadlec": "JK",
+    "Mr Bartosik": "WB",
+    "Mr Szafron": "BS",
+    "Mr Kouritas": "VK",
+    "Ms Viola": "CV"
+  };
+  function consInitials(p) {
+    if (p.consSel && p.consSel !== "__other") return CONS_INITIALS[p.consSel] || "";
+    var name = (p.consOther || "").trim();
+    if (!name) return "";
+    var words = name.split(/\s+/).filter(function (w) {
+      return !/^(mr|mrs|ms|miss|dr|prof|professor)\.?$/i.test(w);
+    });
+    if (!words.length) return "";
+    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+    return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+  }
+  function consultantOf(p) { return p.consSel === "__other" ? p.consOther : p.consSel; }
+  function opText(p) {
+    var appr = p.appr === "__other" ? p.apprOther : p.appr;
+    return [appr, p.side, p.opDetail].filter(Boolean).join(" ");
+  }
+  function wardPatients() {
+    return data.patients.filter(function (p) { return p.ward === data.currentWard; });
+  }
+  function currentWardObj() {
+    return data.wards.find(function (w) { return w.id === data.currentWard; }) || data.wards[0];
+  }
+  function wardIndex() {
+    var i = data.wards.findIndex(function (w) { return w.id === data.currentWard; });
+    return i < 0 ? 0 : i;
+  }
+
+  // ---------- theme ----------
+  function applyTheme() {
+    document.documentElement.setAttribute("data-theme", data.theme || "navy");
+    var inks = { navy: "#131E33", maroon: "#3E1219", emerald: "#0E251C" };
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", inks[data.theme] || "#131E33");
+    document.querySelectorAll(".theme-dot").forEach(function (b) {
+      b.classList.toggle("sel", b.getAttribute("data-theme") === data.theme);
+    });
+  }
+  document.querySelectorAll(".theme-dot").forEach(function (b) {
+    b.addEventListener("click", function () {
+      data.theme = b.getAttribute("data-theme");
+      applyTheme(); persist();
+    });
+  });
+
+  // ---------- render ----------
+  var listEl = document.getElementById("list");
+
+  function tile(label, val, unit) {
+    var has = val !== "" && val != null;
+    return '<div class="tile"><div class="t-label">' + label + '</div>' +
+      '<div class="t-val' + (has ? "" : " blank") + '">' + (has ? esc(val) + (unit || "") : "\u2013") + "</div></div>";
+  }
+
+  function drainLine(d, i) {
+    var bits = ['<span class="d-name">Drain ' + (i + 1) + "</span>"];
+    var leak = d.airLeak !== "" && d.airLeak != null ? parseFloat(d.airLeak) : null;
+    if (leak === null || isNaN(leak)) {
+      bits.push('<span class="d-item"><span>Leak</span> <b>\u2013</b></span>');
+    } else if (leak > 0) {
+      bits.push('<span class="d-item"><span>Leak</span> <b class="leak">' + esc(d.airLeak) + "</b> ml/min</span>");
+    } else {
+      bits.push('<span class="d-item"><span>Leak</span> <b>0</b> ml/min</span>');
+    }
+    bits.push('<span class="d-item"><span>Suction</span> <b>' + (d.suction ? esc(d.suction) : "off") + "</b></span>");
+    var out = (d.output !== "" && d.output != null) ? esc(d.output) + " ml" : "\u2013";
+    var fluid = d.fluid ? " " + esc(d.fluid).toLowerCase() : "";
+    bits.push('<span class="d-item"><span>Output</span> <b>' + out + "</b>" + fluid + "</span>");
+    if (d.clamped) bits.push('<span class="flag-clamped">CLAMPED</span>');
+    return '<div class="drain">' + bits.join("") + "</div>";
+  }
+
+  function card(p) {
+    var pod = daysSince(p.dos);
+    var podTxt = pod === null ? "" : "D" + pod;
+    var op = opText(p);
+    var ci = consInitials(p);
+    var isOpen = !!expanded[p.id];
+
+    var head =
+      '<div class="head" data-act="toggle" data-p="' + p.id + '">' +
+        '<div class="bed"><span class="label">Bed</span><span class="num">' + esc(p.bed || "?") + "</span></div>" +
+        '<div class="head-mid">' +
+          '<div class="pt-line">' + esc(p.initials || "?") +
+            (p.age ? ' <span class="age">' + esc(p.age) + "y</span>" : "") + "</div>" +
+          '<div class="op">' + esc(op || "No operation recorded") + "</div>" +
+        "</div>" +
+        (ci ? '<span class="cons-badge">' + esc(ci) + "</span>" : "") +
+        (podTxt ? '<span class="pod">' + podTxt + "</span>" : "") +
+        '<span class="chev-card">&#9660;</span>' +
+      "</div>";
+
+    if (!isOpen) return '<div class="card">' + head + "</div>";
+
+    var cons = consultantOf(p);
+    var dmChip = p.dm ? '<span class="chip' + (p.dm === "Insulin" ? " warn" : "") + '">DM: ' + esc(p.dm) + "</span>" : "";
+    var allergyChip = p.allergies ? '<span class="chip danger">Allergy: ' + esc(p.allergies) + "</span>" : "";
+    var consChip = cons ? '<span class="chip">' + esc(cons) + "</span>" : "";
+
+    var drainsHtml = (p.drains && p.drains.length) ? p.drains.map(drainLine).join("") : '<div class="no-drains">No drains in situ</div>';
+
+    var obsHas = [p.temp, p.hr, p.bp, p.rr, p.spo2, p.o2].some(function (v) { return v; });
+    var obs = obsHas
+      ? '<div class="tiles">' + tile("T\u00B0", p.temp) + tile("HR", p.hr) + tile("BP", p.bp) +
+        tile("RR", p.rr) + tile("SpO2", p.spo2) + tile("O2", p.o2) + "</div>"
+      : '<div class="none-txt">Not recorded</div>';
+
+    var cxrN = daysSince(p.cxr);
+    var cxrTxt = p.cxr
+      ? "<b>" + fmtDate(p.cxr) + "</b> (" + (cxrN >= 2 ? '<span class="stale">' + ago(p.cxr) + "</span>" : ago(p.cxr)) + ")"
+      : "<b>\u2013</b>";
+    var bldTxt = p.bldDate ? " \u00B7 " + fmtDate(p.bldDate) + " (" + ago(p.bldDate) + ")" : "";
+
+    var medList = (p.meds && p.meds.length)
+      ? p.meds.map(function (m) { return '<div class="med-item">' + esc(m) + "</div>"; }).join("")
+      : "";
+    var medsHtml =
+      '<div class="med-row allergy-line"><span class="m-label">Allergies</span>' +
+        (p.allergies ? "<b>" + esc(p.allergies) + "</b>" : '<span class="none-txt">not recorded</span>') + "</div>" +
+      '<div class="med-row"><span class="m-label">Abx</span>' + (p.abx ? esc(p.abx) : '<span class="none-txt">none</span>') + "</div>" +
+      '<div class="med-row"><span class="m-label">Anticoag</span>' + (p.acoag ? esc(p.acoag) : '<span class="none-txt">none</span>') + "</div>" +
+      medList;
+
+    var jobs = (p.jobs || []).map(function (j) {
+      return '<div class="job' + (j.done ? " done" : "") + '">' +
+        '<input type="checkbox" ' + (j.done ? "checked" : "") + ' data-act="togglejob" data-p="' + p.id + '" data-j="' + j.id + '">' +
+        '<span class="j-text">' + esc(j.text) + "</span>" +
+        '<button class="j-del" data-act="deljob" data-p="' + p.id + '" data-j="' + j.id + '">\u2715</button></div>';
+    }).join("");
+
+    var body =
+      '<div class="body">' +
+        '<div class="section"><div class="id-row">' + consChip + dmChip + allergyChip +
+          '<button class="edit-btn" data-act="edit" data-p="' + p.id + '">Edit</button>' +
+        "</div></div>" +
+        '<div class="section"><div class="sec-label">Drains</div>' + drainsHtml + "</div>" +
+        '<div class="section"><div class="sec-label">Obs (this morning)</div>' + obs + "</div>" +
+        '<div class="section"><div class="sec-label">Bloods' + bldTxt + "</div>" +
+          '<div class="tiles">' +
+            tile("Hb", p.hb) + tile("WCC", p.wcc) + tile("CRP", p.crp) +
+            tile("Na", p.na) + tile("K", p.k) + tile("Cr", p.cr) +
+          "</div>" +
+          '<div class="meta-row"><span class="meta-item">Latest CXR: ' + cxrTxt + "</span></div>" +
+        "</div>" +
+        '<div class="section"><div class="sec-label">Medications</div>' + medsHtml + "</div>" +
+        '<div class="section jobs"><div class="sec-label">Jobs</div>' + jobs +
+          '<div class="job-add"><input placeholder="Add a job..." data-jobinput="' + p.id + '">' +
+          '<button data-act="addjob" data-p="' + p.id + '">Add</button></div>' +
+        "</div>" +
+      "</div>";
+
+    return '<div class="card open">' + head + body + "</div>";
+  }
+
+  function render() {
+    var pts = wardPatients().sort(bedSort);
+    document.getElementById("wardName").textContent = currentWardObj().name;
+    document.getElementById("count").textContent = pts.length + (pts.length === 1 ? " patient" : " patients");
+    if (!pts.length) {
+      listEl.innerHTML = '<div class="empty"><strong>No patients on this ward</strong>Tap + to add a patient, or swipe the bar below to change ward.</div>';
+    } else {
+      listEl.innerHTML = pts.map(card).join("");
+    }
+    updateDots();
+  }
+
+  // ---------- bottom pager ----------
+  var pagerEl = document.getElementById("pager");
+  var dotsEl = document.getElementById("dots");
+  var pagerIgnore = false;
+  var scrollTimer = null;
+
+  function renderPager() {
+    pagerEl.innerHTML = data.wards.map(function (w) {
+      return '<div class="slide">' + esc(w.name) + "</div>";
+    }).join("");
+    dotsEl.innerHTML = data.wards.map(function (w, i) {
+      return '<button class="dot" data-di="' + i + '" aria-label="Ward ' + (i + 1) + '"></button>';
+    }).join("");
+    snapPagerToCurrent(false);
+    updateDots();
+  }
+  function snapPagerToCurrent(smooth) {
+    pagerIgnore = true;
+    var left = wardIndex() * pagerEl.clientWidth;
+    if (smooth) pagerEl.scrollTo({ left: left, behavior: "smooth" });
+    else pagerEl.scrollLeft = left;
+    setTimeout(function () { pagerIgnore = false; }, smooth ? 400 : 120);
+  }
+  function updateDots() {
+    var idx = wardIndex();
+    dotsEl.querySelectorAll(".dot").forEach(function (d, i) {
+      d.classList.toggle("on", i === idx);
+    });
+  }
+  pagerEl.addEventListener("scroll", function () {
+    if (pagerIgnore) return;
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(function () {
+      var w = pagerEl.clientWidth || 1;
+      var idx = Math.round(pagerEl.scrollLeft / w);
+      idx = Math.max(0, Math.min(data.wards.length - 1, idx));
+      var ward = data.wards[idx];
+      if (ward && ward.id !== data.currentWard) {
+        data.currentWard = ward.id;
+        persist(); render();
+      } else {
+        updateDots();
+      }
+    }, 90);
+  });
+  dotsEl.addEventListener("click", function (e) {
+    var di = e.target.getAttribute("data-di");
+    if (di == null) return;
+    var ward = data.wards[+di];
+    if (!ward) return;
+    data.currentWard = ward.id;
+    persist(); render();
+    snapPagerToCurrent(true);
+  });
+  window.addEventListener("resize", function () { snapPagerToCurrent(false); });
+
+  // ---------- ward management ----------
+  var wardSheet = document.getElementById("wardSheet");
+  function renderWards() {
+    document.getElementById("wardRows").innerHTML = data.wards.map(function (w) {
+      var n = data.patients.filter(function (p) { return p.ward === w.id; }).length;
+      return '<div class="ward-row' + (w.id === data.currentWard ? " current" : "") + '" data-w="' + w.id + '">' +
+        '<div class="w-main">' + esc(w.name) + "</div>" +
+        '<span class="w-count">' + n + " pt" + (n === 1 ? "" : "s") + "</span>" +
+        '<button data-wact="rename" data-w="' + w.id + '">&#9998;</button>' +
+        '<button class="w-del" data-wact="delete" data-w="' + w.id + '">&#10005;</button>' +
+      "</div>";
+    }).join("");
+  }
+  document.getElementById("manageBtn").addEventListener("click", function () {
+    renderWards(); wardSheet.classList.add("open");
+  });
+  document.getElementById("wardClose").addEventListener("click", function () {
+    wardSheet.classList.remove("open");
+  });
+  document.getElementById("addWardBtn").addEventListener("click", function () {
+    var input = document.getElementById("newWardName");
+    var name = input.value.trim();
+    if (!name) return;
+    var w = { id: uid(), name: name };
+    data.wards.push(w);
+    data.currentWard = w.id;
+    input.value = "";
+    persist(); renderWards(); renderPager(); render();
+  });
+  document.getElementById("wardRows").addEventListener("click", function (e) {
+    var act = e.target.getAttribute("data-wact");
+    var wid = e.target.getAttribute("data-w") || (e.target.closest(".ward-row") && e.target.closest(".ward-row").getAttribute("data-w"));
+    if (!wid) return;
+    var w = data.wards.find(function (x) { return x.id === wid; });
+    if (!w) return;
+
+    if (act === "rename") {
+      var name = prompt("Rename ward", w.name);
+      if (name && name.trim()) { w.name = name.trim(); persist(); renderWards(); renderPager(); render(); }
+      return;
+    }
+    if (act === "delete") {
+      var n = data.patients.filter(function (p) { return p.ward === wid; }).length;
+      if (data.wards.length === 1) { alert("You need at least one ward."); return; }
+      if (n > 0) { alert("This ward still has " + n + " patient" + (n === 1 ? "" : "s") + ". Move or discharge them first."); return; }
+      if (!confirm('Delete ward "' + w.name + '"?')) return;
+      data.wards = data.wards.filter(function (x) { return x.id !== wid; });
+      if (data.currentWard === wid) data.currentWard = data.wards[0].id;
+      persist(); renderWards(); renderPager(); render();
+      return;
+    }
+    data.currentWard = wid;
+    persist(); renderWards(); render();
+    snapPagerToCurrent(false);
+    wardSheet.classList.remove("open");
+  });
+
+  // ---------- drain form rows ----------
+  var drainFormsEl = document.getElementById("drainForms");
+  function renderDrainForms() {
+    drainFormsEl.innerHTML = draftDrains.map(function (d, i) {
+      return '<div class="drain-block">' +
+        '<div class="d-head"><b>Drain ' + (i + 1) + '</b><button type="button" data-deldrain="' + i + '">Remove</button></div>' +
+        '<div class="frow">' +
+          '<div class="field"><label>Air leak (ml/min)</label><input class="mono" inputmode="numeric" data-df="airLeak" data-di="' + i + '" value="' + esc(d.airLeak) + '" placeholder="0"></div>' +
+          '<div class="field"><label>Suction</label><input data-df="suction" data-di="' + i + '" value="' + esc(d.suction) + '" placeholder="2 kPa / off"></div>' +
+        "</div>" +
+        '<div class="frow">' +
+          '<div class="field"><label>Output (ml / 24h)</label><input class="mono" inputmode="numeric" data-df="output" data-di="' + i + '" value="' + esc(d.output) + '"></div>' +
+          '<div class="field"><label>Fluid type</label><select data-df="fluid" data-di="' + i + '">' +
+            ["","Serous","Haemoserous","Serosanguinous","Frank blood","Chylous","Purulent","Air only"].map(function (o) {
+              return '<option value="' + o + '"' + (d.fluid === o ? " selected" : "") + ">" + (o || "\u2013") + "</option>";
+            }).join("") + "</select></div>" +
+        "</div>" +
+        '<div class="toggle-row"><label>Clamped</label><input type="checkbox" data-df="clamped" data-di="' + i + '"' + (d.clamped ? " checked" : "") + "></div>" +
+      "</div>";
+    }).join("");
+  }
+  drainFormsEl.addEventListener("input", function (e) {
+    var f = e.target.getAttribute("data-df");
+    if (!f) return;
+    var i = +e.target.getAttribute("data-di");
+    draftDrains[i][f] = f === "clamped" ? e.target.checked : e.target.value;
+  });
+  drainFormsEl.addEventListener("click", function (e) {
+    var del = e.target.getAttribute("data-deldrain");
+    if (del != null) { draftDrains.splice(+del, 1); renderDrainForms(); }
+  });
+  document.getElementById("addDrainBtn").addEventListener("click", function () {
+    draftDrains.push({ airLeak: "", suction: "", output: "", fluid: "", clamped: false });
+    renderDrainForms();
+  });
+
+  // ---------- medication list rows ----------
+  var medFormsEl = document.getElementById("medForms");
+  function renderMedForms() {
+    medFormsEl.innerHTML = draftMeds.map(function (m, i) {
+      return '<div class="med-edit-row">' +
+        '<input data-mf="' + i + '" value="' + esc(m) + '" placeholder="Drug, dose, frequency">' +
+        '<button type="button" data-delmed="' + i + '">\u2715</button>' +
+      "</div>";
+    }).join("");
+  }
+  medFormsEl.addEventListener("input", function (e) {
+    var i = e.target.getAttribute("data-mf");
+    if (i == null) return;
+    draftMeds[+i] = e.target.value;
+  });
+  medFormsEl.addEventListener("click", function (e) {
+    var del = e.target.getAttribute("data-delmed");
+    if (del != null) { draftMeds.splice(+del, 1); renderMedForms(); }
+  });
+  document.getElementById("addMedBtn").addEventListener("click", function () {
+    draftMeds.push("");
+    renderMedForms();
+    var inputs = medFormsEl.querySelectorAll("input");
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  });
+
+  // ---------- patient sheet ----------
+  var sheet = document.getElementById("sheet");
+  var fields = ["initials","bed","age","consSel","consOther","dm","allergies","appr","apprOther","side","opDetail","dos",
+    "temp","hr","bp","rr","spo2","o2","abx","acoag","cxr","bldDate","hb","wcc","crp","na","k","cr"];
+  function fEl(name) { return document.getElementById("f_" + name); }
+
+  function syncOther() {
+    document.getElementById("consOtherWrap").classList.toggle("hidden", fEl("consSel").value !== "__other");
+    document.getElementById("apprOtherWrap").classList.toggle("hidden", fEl("appr").value !== "__other");
+  }
+  fEl("consSel").addEventListener("change", syncOther);
+  fEl("appr").addEventListener("change", syncOther);
+
+  function fillWardSelect(selected) {
+    fEl("ward").innerHTML = data.wards.map(function (w) {
+      return '<option value="' + w.id + '"' + (w.id === selected ? " selected" : "") + ">" + esc(w.name) + "</option>";
+    }).join("");
+  }
+
+  function openSheet(p) {
+    editingId = p ? p.id : null;
+    document.getElementById("sheetTitle").textContent = p ? "Edit patient" : "New patient";
+    document.getElementById("deleteBtn").style.display = p ? "block" : "none";
+    fields.forEach(function (f) { fEl(f).value = p ? (p[f] || "") : ""; });
+    fillWardSelect(p ? p.ward : data.currentWard);
+    draftDrains = p ? JSON.parse(JSON.stringify(p.drains || [])) : [];
+    draftMeds = p ? (p.meds || []).slice() : [];
+    renderDrainForms();
+    renderMedForms();
+    syncOther();
+    sheet.classList.add("open");
+    sheet.scrollTop = 0;
+  }
+  function closeSheet() { sheet.classList.remove("open"); }
+
+  document.getElementById("addBtn").addEventListener("click", function () { openSheet(null); });
+  document.getElementById("cancelBtn").addEventListener("click", closeSheet);
+
+  document.getElementById("saveBtn").addEventListener("click", function () {
+    var d = {};
+    fields.forEach(function (f) { d[f] = fEl(f).value.trim(); });
+    if (!d.initials && !d.bed) { alert("Enter at least initials or a bed number."); return; }
+    d.ward = fEl("ward").value;
+    d.drains = draftDrains;
+    d.meds = draftMeds.map(function (m) { return m.trim(); }).filter(Boolean);
+    if (editingId) {
+      var p = data.patients.find(function (x) { return x.id === editingId; });
+      if (p) { d.jobs = p.jobs || []; d.id = p.id; Object.assign(p, d); }
+    } else {
+      d.id = uid();
+      d.jobs = [];
+      data.patients.push(d);
+      expanded[d.id] = true;
+    }
+    persist(); render(); closeSheet();
+  });
+
+  document.getElementById("deleteBtn").addEventListener("click", function () {
+    if (!editingId) return;
+    if (!confirm("Remove this patient from the list?")) return;
+    data.patients = data.patients.filter(function (x) { return x.id !== editingId; });
+    persist(); render(); closeSheet();
+  });
+
+  // ---------- list interactions ----------
+  listEl.addEventListener("click", function (e) {
+    var actEl = e.target.closest("[data-act]");
+    if (!actEl) return;
+    var act = actEl.getAttribute("data-act");
+    var pid = actEl.getAttribute("data-p");
+    var p = data.patients.find(function (x) { return x.id === pid; });
+    if (!p) return;
+
+    if (act === "toggle") { expanded[pid] = !expanded[pid]; render(); return; }
+    if (act === "edit") { openSheet(p); return; }
+    if (act === "addjob") {
+      var input = listEl.querySelector('[data-jobinput="' + pid + '"]');
+      var text = input.value.trim();
+      if (!text) return;
+      p.jobs = p.jobs || [];
+      p.jobs.push({ id: uid(), text: text, done: false });
+      persist(); render();
+      return;
+    }
+    if (act === "togglejob" || act === "deljob") {
+      var jid = actEl.getAttribute("data-j");
+      p.jobs = p.jobs || [];
+      if (act === "deljob") p.jobs = p.jobs.filter(function (j) { return j.id !== jid; });
+      else {
+        var j = p.jobs.find(function (x) { return x.id === jid; });
+        if (j) j.done = !j.done;
+      }
+      persist(); render();
+    }
+  });
+
+  listEl.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter") return;
+    var pid = e.target.getAttribute("data-jobinput");
+    if (!pid) return;
+    var p = data.patients.find(function (x) { return x.id === pid; });
+    var text = e.target.value.trim();
+    if (!p || !text) return;
+    p.jobs = p.jobs || [];
+    p.jobs.push({ id: uid(), text: text, done: false });
+    persist(); render();
+  });
+
+  applyTheme();
+  renderPager();
+  render();
+  persist();
+  setInterval(render, 60 * 60 * 1000);
+})();
+</script>
+</body>
+</html>
